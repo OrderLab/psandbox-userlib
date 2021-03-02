@@ -89,7 +89,14 @@ void log_write_up_to(ibool flush_to_disk) {
   BoxEvent event;
   if (flush_to_disk) {
     PSandbox *sandbox = pbox_get();
-    pbox_condition(0,false);
+    Condition cond;
+    cond.value = 0;
+    cond.compare = LARGE;
+    pbox_update_condition(&n_pending_flushes,cond);
+    event.event_type = ENTERLOOP;
+    event.key_type = INTEGER;
+    event.key = &n_pending_flushes;
+    pbox_update(event,sandbox);
     pthread_mutex_lock(&mutex);
 retry:
     if(n_pending_flushes>0) {
@@ -103,7 +110,7 @@ retry:
       event.key = &n_pending_flushes;
       event.key_type = INTEGER;
       pbox_update(event,sandbox);
-//      printf("getpid %d sleep\n",syscall(SYS_gettid));
+      printf("getpid %d sleep\n",syscall(SYS_gettid));
       pthread_mutex_lock(&mutex);
       goto retry;
     }
@@ -133,14 +140,16 @@ retry:
 
 void* do_handle_one_connection(void* arg) {
   pSandbox* box = pbox_create(0.2);
-
+  
+  printf("create box %d\n",syscall(SYS_gettid));
   for(int i = 0; i < 1; i++) {
     pbox_active(box);
     mysql_execute_command(SQLCOM_INSERT);
     pbox_freeze(box);
   }
+  //sleep(1);
   pbox_release(box);
-//  printf("getpid %d\n",syscall(SYS_gettid));
+  printf("release %d\n",syscall(SYS_gettid));
   return 0;
 }
 
