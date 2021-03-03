@@ -1,6 +1,14 @@
-#include <iostream>
+//
+// The Psandbox project
+//
+// Created by yigonghu on 3/3/21.
+//
+// Copyright (c) 2021, Johns Hopkins University - Order Lab
+//
+//      All rights reserved.
+//      Licensed under the Apache License, Version 2.0 (the "License");
+
 #include <stdio.h>
-#include <stdlib.h>
 #include <pthread.h>
 #include "../libs/include/psandbox.h"
 
@@ -26,8 +34,6 @@ int main() {
   return mysqld_main();
 }
 
-
-
 void
 os_thread_sleep(
 /*============*/
@@ -43,7 +49,7 @@ os_thread_sleep(
 
 void srv_conc_enter_innodb(){
   struct sandboxEvent event;
-  event.event_type=ENTERLOOP;
+  event.event_type=TRY_QUEUE;
 //  pbox_update(event);
   for (;;) {
     int	sleep_in_us;
@@ -52,7 +58,7 @@ void srv_conc_enter_innodb(){
       int active = os_atomic_increment(
           &n_active, 1);
       if (active <= srv_thread_concurrency) {
-        event.event_type=EXITLOOP;
+        event.event_type=ENTER_QUEUE;
 //        pbox_update(event);
 
         return;

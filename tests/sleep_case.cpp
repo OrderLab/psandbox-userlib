@@ -17,7 +17,7 @@
 #include <unistd.h>
 #include <sys/syscall.h>
 
-#define NUM_THREADS  2
+#define NUM_THREADS  4
 # define os_atomic_increment(ptr, amount) \
 	__sync_add_and_fetch(ptr, amount)
 
@@ -71,7 +71,7 @@ int mysql_execute_command(enum_sql_command sql_command) {
       }
     }
     return ret;
-  }
+}
 
 int mysql_insert() {
     if (srv_flush_log_at_trx_commit == 0) {
@@ -88,68 +88,125 @@ int mysql_insert() {
 void log_write_up_to(ibool flush_to_disk) {
   BoxEvent event;
   if (flush_to_disk) {
+
     PSandbox *sandbox = pbox_get();
-    Condition cond;
-    cond.value = 0;
-    cond.compare = LARGE;
-    pbox_update_condition(&n_pending_flushes,cond);
-    event.event_type = ENTERLOOP;
+
+    event.event_type = TRY_QUEUE;
     event.key_type = INTEGER;
     event.key = &n_pending_flushes;
     pbox_update(event,sandbox);
+
+    Condition cond;
+    cond.value = 0;
+    cond.compare = COND_LARGE;
+    pbox_update_condition(&n_pending_flushes,cond);
+
+    event.event_type = MUTEX_REQUIRE;
+    event.key_type = MUTEX;
+    event.key = &mutex;
+    pbox_update(event,sandbox);
+
     pthread_mutex_lock(&mutex);
+
+    event.event_type = MUTEX_GET;
+    event.key_type = MUTEX;
+    event.key = &mutex;
+    pbox_update(event,sandbox);
 retry:
     if(n_pending_flushes>0) {
       pthread_mutex_unlock(&mutex);
+      event.event_type = MUTEX_RELEASE;
+      event.key_type = MUTEX;
+      event.key = &mutex;
+      pbox_update(event,sandbox);
+
       event.event_type = SLEEP_BEGIN;
       event.key_type = INTEGER;
       event.key = &n_pending_flushes;
       pbox_update(event,sandbox);
-      os_thread_sleep(5000000);
+      os_thread_sleep(1000000);
       event.event_type = SLEEP_END;
       event.key = &n_pending_flushes;
       event.key_type = INTEGER;
       pbox_update(event,sandbox);
-      printf("getpid %d sleep\n",syscall(SYS_gettid));
+//      printf("getpid %d sleep\n",syscall(SYS_gettid));
+
+      event.event_type = MUTEX_REQUIRE;
+      event.key_type = MUTEX;
+      event.key = &mutex;
+      pbox_update(event,sandbox);
+
       pthread_mutex_lock(&mutex);
+
+      event.event_type = MUTEX_GET;
+      event.key_type = MUTEX;
+      event.key = &mutex;
+      pbox_update(event,sandbox);
+
       goto retry;
     }
 
     n_pending_flushes++;
-    event.event_type = UPDATE_KEY;
+
+    event.event_type = ENTER_QUEUE;
+    event.key_type = INTEGER;
+    event.key = &n_pending_flushes;
+    pbox_update(event,sandbox);
+
+    event.event_type = UPDATE_QUEUE_CONDITION;
     event.key = &n_pending_flushes;
     event.key_type = INTEGER;
     pbox_update(event,sandbox);
     pthread_mutex_unlock(&mutex);
+    event.event_type = MUTEX_RELEASE;
+    event.key_type = MUTEX;
+    event.key = &mutex;
+    pbox_update(event,sandbox);
+
     char *buffer = "Yigong Hu";
     std::ofstream file;
     file.open("output.txt");
     file.write(buffer, 9);
     file.flush();
-    os_thread_sleep(1000);
-    file.close();
 
+    file.close();
+//    os_thread_sleep(1000);
     pthread_mutex_lock(&mutex);
     n_pending_flushes--;
-    event.event_type = UPDATE_KEY;
+
+    event.event_type = UPDATE_QUEUE_CONDITION;
     event.key_type = INTEGER;
+    event.key = &n_pending_flushes;
     pbox_update(event,sandbox);
+
+    event.event_type = EXIT_QUEUE;
+    event.key_type = INTEGER;
+    event.key = &n_pending_flushes;
+    pbox_update(event,sandbox);
+
     pthread_mutex_unlock(&mutex);
+
+
   }
 }
 
 void* do_handle_one_connection(void* arg) {
   pSandbox* box = pbox_create(0.2);
-  
-  printf("create box %d\n",syscall(SYS_gettid));
-  for(int i = 0; i < 1; i++) {
+  int id = *(int *)arg;
+//  printf("create box %d\n",syscall(SYS_gettid));
+  for(int i = 0; i < 4; i++) {
     pbox_active(box);
+    if(id == 1) {
+//      printf("block %d\n",syscall(SYS_gettid));
+      sleep(5);
+//      printf("unblock %d\n",syscall(SYS_gettid));
+    }
     mysql_execute_command(SQLCOM_INSERT);
     pbox_freeze(box);
   }
-  //sleep(1);
+
   pbox_release(box);
-  printf("release %d\n",syscall(SYS_gettid));
+//  printf("release %d\n",syscall(SYS_gettid));
   return 0;
 }
 

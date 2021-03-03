@@ -66,13 +66,19 @@ static int list_size(LinkedList *const linkedlist);
 /// @param linkedlist The linkedlist to find the element.
 /// @param value The value to find.
 /// @return The node that we find.
-struct linkedlist_element_s *list_find(LinkedList *const linkedlist, void *value);
+static struct linkedlist_element_s *list_find(LinkedList *const linkedlist, void *value);
 
 /// @brief Remove an element from the linkedlist and pop it out.
 /// @param linkedlist The linkedlist to remove from.
 /// @param value The value to remove.
 /// @return The removed element.
-struct linkedlist_element_s *list_remove(LinkedList *const linkedlist, void *value);
+static struct linkedlist_element_s *list_remove_and_return_key(LinkedList *const linkedlist, void *value);
+
+/// @brief Remove an element from the linkedlist
+/// @param linkedlist The linkedlist to remove from.
+/// @param value The value to remove.
+/// @return On success 0 is returned.
+static int list_remove(LinkedList *const linkedlist, void *value);
 
 LinkedList *linkedlist_create() {
   LinkedList *linkedList = (LinkedList *)malloc(sizeof(LinkedList));
@@ -167,7 +173,7 @@ struct linkedlist_element_s *list_find(LinkedList *const linkedlist, void *value
 }
 
 //delete a link with given key
-struct linkedlist_element_s *list_remove(LinkedList *const linkedlist, void *value) {
+struct linkedlist_element_s *list_remove_and_return_key(LinkedList *const linkedlist, void *value) {
 
   //start from the first link
   struct linkedlist_element_s *current = linkedlist->head;
@@ -200,23 +206,62 @@ struct linkedlist_element_s *list_remove(LinkedList *const linkedlist, void *val
     //bypass the current link
     previous->next = current->next;
   }
-
+  linkedlist->size--;
   return current;
 }
 
+//delete a link with given key
+int list_remove(LinkedList *const linkedlist, void *value) {
+
+  //start from the first link
+  struct linkedlist_element_s *current = linkedlist->head;
+  struct linkedlist_element_s *previous = NULL;
+
+  //if list is empty
+  if (linkedlist->head == NULL) {
+    return -1;
+  }
+
+  //navigate through list
+  while (current->data != value) {
+
+    //if it is last node
+    if (current->next == NULL) {
+      return -1;
+    } else {
+      //store reference to current link
+      previous = current;
+      //move to next link
+      current = current->next;
+    }
+  }
+
+  //found a match, update the link
+  if (current == linkedlist->head) {
+    //change first to point to next link
+    linkedlist->head = linkedlist->head->next;
+  } else {
+    //bypass the current link
+    previous->next = current->next;
+  }
+  linkedlist->size--;
+  free(current);
+  return 0;
+}
+
 //display the list
-//void printList() {
-//  struct node *ptr = head;
-//  printf("\n[ ");
-//
-//  //start from the beginning
-//  while (ptr != NULL) {
-//    printf("(%d,%d) ", ptr->sandbox->box_id, ptr->sandbox->box_id);
-//    ptr = ptr->next;
-//  }
-//
-//  printf(" ]");
-//}
+void printList(LinkedList *const linkedlist) {
+  struct linkedlist_element_s *ptr = linkedlist->head;
+  printf("\n[ ");
+
+  //start from the beginning
+  while (ptr != NULL) {
+    printf("(%d) ", ptr->data);
+    ptr = ptr->next;
+  }
+
+  printf(" ]");
+}
 
 //void list_reverse(struct node **head_ref) {
 //  struct node *prev = NULL;
