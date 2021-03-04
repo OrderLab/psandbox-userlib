@@ -56,11 +56,11 @@ typedef struct activity {
 } Activity;
 
 typedef struct pSandbox {
-  long box_id;    // sandbox id used by syscalls
+  int bid;    // sandbox id used by syscalls
   enum enum_psandbox_state state;
   Activity *activity;
   pid_t tid;
-  float delay_ratio;
+  int delay_ratio;
 } PSandbox;
 
 typedef struct condition {
@@ -70,22 +70,22 @@ typedef struct condition {
 
 typedef struct sandboxEvent {
   enum enum_event_type event_type;
-  void *key;
+  void* key;
   enum enum_key_type key_type;
 } BoxEvent;
 
-PSandbox *pbox_create(float ratio);
-int pbox_release(PSandbox *pSandbox);
+PSandbox *create_psandbox(int ratio);
+int release_psandbox(PSandbox *pSandbox);
 
 /// @brief Update an event to the performance sandbox
 /// @param event The event to notify the performance sandbox.
 /// @param sandbox The sandbox to notify
 /// @return On success 0 is returned.
-int pbox_update(struct sandboxEvent event, PSandbox *sandbox);
+int update_psandbox(struct sandboxEvent event, PSandbox *sandbox);
 
-int pbox_active(PSandbox *pSandbox);
-int pbox_freeze(PSandbox *pSandbox);
-struct pSandbox *pbox_get();
+int active_psandbox(PSandbox *pSandbox);
+int freeze_psandbox(PSandbox *pSandbox);
+struct pSandbox *get_psandbox();
 
 /// @brief Update the queue condition to enter the queue
 /// @param key The key of the queue

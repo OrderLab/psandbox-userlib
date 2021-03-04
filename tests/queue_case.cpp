@@ -50,7 +50,7 @@ os_thread_sleep(
 void srv_conc_enter_innodb(){
   struct sandboxEvent event;
   event.event_type=TRY_QUEUE;
-//  pbox_update(event);
+//  update_psandbox(event);
   for (;;) {
     int	sleep_in_us;
 
@@ -59,7 +59,7 @@ void srv_conc_enter_innodb(){
           &n_active, 1);
       if (active <= srv_thread_concurrency) {
         event.event_type=ENTER_QUEUE;
-//        pbox_update(event);
+//        update_psandbox(event);
 
         return;
       }
@@ -74,13 +74,13 @@ void srv_conc_enter_innodb(){
 }
 
 void* do_handle_one_connection(void* arg) {
-//  pSandbox* box = pbox_create();
+//  pSandbox* box = create_psandbox();
   srv_conc_enter_innodb();
   pthread_mutex_lock(&mutex);
   int i = *(int *)arg;
   pthread_mutex_unlock(&mutex);
   if(i<4) {
-    int sleep_in_us = 1000000 * 5;
+    int sleep_in_us = 1000000 * 10;
     os_thread_sleep(sleep_in_us);
   } else {
     int sleep_in_us = 1000000 * 1;
@@ -90,7 +90,7 @@ void* do_handle_one_connection(void* arg) {
   (void) os_atomic_decrement(&n_active, 1);
 
   printf("id = %d\n",i);
-//  pbox_release(box);
+//  release_psandbox(box);
   return 0;
 }
 

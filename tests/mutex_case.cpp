@@ -72,7 +72,7 @@ int mysql_execute_command(enum_sql_command sql_command, int id) {
 int mysql_select(int id) {
   int loop = LOOP_BASE;
   int i;
-  PSandbox *sandbox = pbox_get();
+  PSandbox *sandbox = get_psandbox();
   if (id == 1 ) {
     os_thread_sleep(10000);
   }
@@ -89,15 +89,16 @@ void row_search_mysql(int id, PSandbox* sandbox) {
   event.key_type = MUTEX;
   event.key = &mutex;
   pthread_mutex_lock(&mutex1);
-  pbox_update(event,sandbox);
+  update_psandbox(event, sandbox);
   pthread_mutex_unlock(&mutex1);
 
   pthread_mutex_lock(&mutex);
-  printf("call row_search_mysql tid = %d, id = %d\n", syscall(SYS_gettid),id);
+//  printf("call row_search_mysql tid = %d, id = %d\n", syscall(SYS_gettid),id);
+
   event.event_type = MUTEX_GET;
   event.key_type = MUTEX;
   event.key = &mutex;
-  pbox_update(event,sandbox);
+  update_psandbox(event, sandbox);
 
   if(id == 0) {
     os_thread_sleep(1000000);
@@ -110,20 +111,21 @@ void row_search_mysql(int id, PSandbox* sandbox) {
   event.event_type = MUTEX_RELEASE;
   event.key_type = MUTEX;
   event.key = &mutex;
-  pbox_update(event,sandbox);
+  update_psandbox(event, sandbox);
+
 }
 
 void* do_handle_one_connection(void* arg) {
-  pSandbox* box = pbox_create(0.2);
+  pSandbox* box = create_psandbox(0.2);
   int id = *(int *)arg;
 //  printf("create box %d\n",syscall(SYS_gettid));
   for(int i = 0; i < 1; i++) {
-    pbox_active(box);
+    active_psandbox(box);
     mysql_execute_command(SQLCOM_SELECT,id);
-    pbox_freeze(box);
+    freeze_psandbox(box);
   }
 
-  pbox_release(box);
+  release_psandbox(box);
 //  printf("release %d\n",syscall(SYS_gettid));
   return 0;
 }
