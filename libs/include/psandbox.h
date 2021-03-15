@@ -21,6 +21,7 @@ extern "C" {
 #endif
 
 enum enum_event_type {
+  START_QUEUE,
   TRY_QUEUE,
   ENTER_QUEUE,
   EXIT_QUEUE,
@@ -45,14 +46,12 @@ enum enum_condition {
 };
 
 enum enum_queue_state {
-  QUEUE_NULL,QUEUE_ENTER,QUEUE_SLEEP,QUEUE_AWAKE
+  QUEUE_NULL,QUEUE_ENTER,QUEUE_SLEEP,QUEUE_AWAKE,QUEUE_EXIT
 };
 
 typedef struct activity {
-  struct timeval execution_start;
-  struct timeval delayed_time;
-  struct timeval delaying_start;
   enum enum_queue_state queue_state;
+  int is_preempted;
 } Activity;
 
 typedef struct pSandbox {
@@ -60,12 +59,14 @@ typedef struct pSandbox {
   enum enum_psandbox_state state;
   Activity *activity;
   pid_t tid;
-  int delay_ratio;
+  float delay_ratio;
+  struct pSandbox *psandbox;
 } PSandbox;
 
 typedef struct condition {
   int value;
   enum enum_condition compare;
+  int temp_value;
 } Condition;
 
 typedef struct sandboxEvent {
@@ -92,7 +93,7 @@ struct pSandbox *get_psandbox();
 /// @param cond The condition for the current queue
 /// @return On success 0 is returned.
 /// The function must be called right after the try queue update
-int pbox_update_condition(int *key, Condition cond);
+int pbox_update_condition(int *keys, Condition cond);
 
 #ifdef __cplusplus
 }

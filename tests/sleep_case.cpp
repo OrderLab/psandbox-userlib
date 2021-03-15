@@ -15,7 +15,7 @@
 #include <unistd.h>
 
 
-#define NUM_THREADS  1
+#define NUM_THREADS  2
 # define os_atomic_increment(ptr, amount) \
 	__sync_add_and_fetch(ptr, amount)
 
@@ -89,7 +89,7 @@ void log_write_up_to(ibool flush_to_disk) {
 
     PSandbox *sandbox = get_psandbox();
 
-    event.event_type = TRY_QUEUE;
+    event.event_type = START_QUEUE;
     event.key_type = INTEGER;
     event.key = &n_pending_flushes;
     update_psandbox(event, sandbox);
@@ -109,7 +109,7 @@ retry:
       event.key_type = INTEGER;
       event.key = &n_pending_flushes;
       update_psandbox(event, sandbox);
-      os_thread_sleep(1000000);
+      os_thread_sleep(5000000);
       event.event_type = SLEEP_END;
       event.key = &n_pending_flushes;
       event.key_type = INTEGER;
@@ -121,17 +121,17 @@ retry:
       goto retry;
     }
 
+    event.event_type = ENTER_QUEUE;
+    event.key_type = INTEGER;
+    event.key = &n_pending_flushes;
+    update_psandbox(event, sandbox);
+
     n_pending_flushes++;
 
-//    event.event_type = ENTER_QUEUE;
-//    event.key_type = INTEGER;
-//    event.key = &n_pending_flushes;
-//    update_psandbox(event, sandbox);
-//
-//    event.event_type = UPDATE_QUEUE_CONDITION;
-//    event.key = &n_pending_flushes;
-//    event.key_type = INTEGER;
-//    update_psandbox(event, sandbox);
+    event.event_type = UPDATE_QUEUE_CONDITION;
+    event.key = &n_pending_flushes;
+    event.key_type = INTEGER;
+    update_psandbox(event, sandbox);
     pthread_mutex_unlock(&mutex);
 
     char *buffer = "Yigong Hu";
@@ -141,47 +141,34 @@ retry:
     file.flush();
 
     file.close();
-//    os_thread_sleep(1000);
+    os_thread_sleep(1000);
     pthread_mutex_lock(&mutex);
     n_pending_flushes--;
 
-//    event.event_type = UPDATE_QUEUE_CONDITION;
-//    event.key_type = INTEGER;
-//    event.key = &n_pending_flushes;
-//    update_psandbox(event, sandbox);
-//
-//    event.event_type = EXIT_QUEUE;
-//    event.key_type = INTEGER;
-//    event.key = &n_pending_flushes;
-//    update_psandbox(event, sandbox);
-
     pthread_mutex_unlock(&mutex);
 
+    event.event_type = UPDATE_QUEUE_CONDITION;
+    event.key_type = INTEGER;
+    event.key = &n_pending_flushes;
+    update_psandbox(event, sandbox);
 
+    event.event_type = EXIT_QUEUE;
+    event.key_type = INTEGER;
+    event.key = &n_pending_flushes;
+    update_psandbox(event, sandbox);
   }
 }
 
 void* do_handle_one_connection(void* arg) {
-//  pthread_mutex_lock(&mutex);
-  pSandbox* box = create_psandbox(1);
-//  pthread_mutex_unlock(&mutex);
-  int id = *(int *)arg;
-//  printf("create box %d\n",syscall(SYS_gettid));
+  PSandbox* box = create_psandbox(1);
+
   for(int i = 0; i < 1; i++) {
-//    pthread_mutex_lock(&mutex);
     active_psandbox(box);
-//    pthread_mutex_unlock(&mutex);
-//    if(id == 1) {
-//      sleep(5);
-//    }
     mysql_execute_command(SQLCOM_INSERT);
-    sleep(1);
     freeze_psandbox(box);
   }
-//  pthread_mutex_lock(&mutex);
+
   release_psandbox(box);
-//  pthread_mutex_unlock(&mutex);
-//  printf("release %d\n",syscall(SYS_gettid));
   return 0;
 }
 
