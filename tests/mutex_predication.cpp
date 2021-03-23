@@ -1,6 +1,16 @@
 //
 // The Psandbox project
 //
+// Created by yigonghu on 3/16/21.
+//
+// Copyright (c) 2021, Johns Hopkins University - Order Lab
+//
+//      All rights reserved.
+//      Licensed under the Apache License, Version 2.0 (the "License");
+
+//
+// The Psandbox project
+//
 // Created by yigonghu on 3/3/21.
 //
 // Copyright (c) 2021, Johns Hopkins University - Order Lab
@@ -11,10 +21,11 @@
 
 #include <stdio.h>
 #include <pthread.h>
+#include <syscall.h>
 #include "../libs/include/psandbox.h"
 
-#define NUM_THREADS  2
-#define LOOP_BASE 5
+#define NUM_THREADS  4
+#define LOOP_BASE 1
 # define os_atomic_increment(ptr, amount) \
 	__sync_add_and_fetch(ptr, amount)
 
@@ -73,11 +84,13 @@ int mysql_select(int id) {
   int i;
   PSandbox *sandbox = get_psandbox();
   if (id == 0 ) {
-    os_thread_sleep(1000);
+    os_thread_sleep(10000);
+  } else if (id >= 1 && id <=2) {
+    os_thread_sleep(4000000);
   }
   for (i = 0; i < loop; i++) {
 //      printf("call row_search_mysql %d\n",syscall(SYS_gettid));
-      row_search_mysql(id,sandbox);
+    row_search_mysql(id,sandbox);
   }
 }
 
@@ -97,10 +110,10 @@ void row_search_mysql(int id, PSandbox* psandbox) {
   event.key = &mutex;
   update_psandbox(event, psandbox);
 
-  if(id == 0) {
-    os_thread_sleep(2000000);
-  } else {
-    os_thread_sleep(10000);
+  if(id == 3) {
+    os_thread_sleep(5000000);
+  } else if (id == 1) {
+    os_thread_sleep(1000000);
   }
 
   pthread_mutex_unlock(&mutex);
@@ -112,8 +125,12 @@ void row_search_mysql(int id, PSandbox* psandbox) {
 }
 
 void* do_handle_one_connection(void* arg) {
-  PSandbox* box = create_psandbox(1);
   int id = *(int *)arg;
+  if ( id == 0) {
+    os_thread_sleep(4000000);
+  }
+  PSandbox* box = create_psandbox(1);
+
 //  printf("create box %d\n",syscall(SYS_gettid));
   for(int i = 0; i < 1; i++) {
     active_psandbox(box);

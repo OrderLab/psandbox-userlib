@@ -9,4 +9,6 @@ add_executable(queue tests/queue_case.cpp libs/include/psandbox.h libs/src/psand
 add_executable(sleep libs/include/psandbox.h libs/src/psandbox.c tests/sleep_case.cpp
         libs/include/hashmap.h)
 add_executable(mutex libs/include/psandbox.h libs/src/psandbox.c tests/mutex_case.cpp
-        libs/include/hashmap.h)
+        libs/include/hashmap.h )
+add_executable(mutex_pre libs/include/psandbox.h libs/src/psandbox.c tests/mutex_predication.cpp
+        libs/include/hashmap.h )

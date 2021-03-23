@@ -89,7 +89,7 @@ void log_write_up_to(ibool flush_to_disk) {
 
     PSandbox *sandbox = get_psandbox();
 
-    event.event_type = START_QUEUE;
+    event.event_type = PREPARE_QUEUE;
     event.key_type = INTEGER;
     event.key = &n_pending_flushes;
     update_psandbox(event, sandbox);
@@ -97,7 +97,7 @@ void log_write_up_to(ibool flush_to_disk) {
     Condition cond;
     cond.value = 0;
     cond.compare = COND_LARGE;
-    pbox_update_condition(&n_pending_flushes,cond);
+    psandbox_update_condition(&n_pending_flushes, cond);
 
     pthread_mutex_lock(&mutex);
 retry:
@@ -114,7 +114,6 @@ retry:
       event.key = &n_pending_flushes;
       event.key_type = INTEGER;
       update_psandbox(event, sandbox);
-//      printf("getpid %d sleep\n",syscall(SYS_gettid));
 
       pthread_mutex_lock(&mutex);
 

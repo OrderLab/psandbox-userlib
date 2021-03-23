@@ -21,8 +21,8 @@ extern "C" {
 #endif
 
 enum enum_event_type {
-  START_QUEUE,
-  TRY_QUEUE,
+  PREPARE_QUEUE,
+  RETRY_QUEUE,
   ENTER_QUEUE,
   EXIT_QUEUE,
   SLEEP_BEGIN,
@@ -51,11 +51,15 @@ enum enum_queue_state {
 
 typedef struct activity {
   enum enum_queue_state queue_state;
+  struct timespec execution_start;
+  struct timespec defer_time;
+  struct timespec delaying_start;
+  int try_number;
   int is_preempted;
 } Activity;
 
 typedef struct pSandbox {
-  int bid;    // sandbox id used by syscalls
+  long bid;    // sandbox id used by syscalls
   enum enum_psandbox_state state;
   Activity *activity;
   pid_t tid;
@@ -75,7 +79,11 @@ typedef struct sandboxEvent {
   enum enum_key_type key_type;
 } BoxEvent;
 
-PSandbox *create_psandbox(int ratio);
+/// @brief Create a performance sandbox
+/// @param rule The rule to apply performance interference rule that the performance sandbox need to satisfy.
+/// @return The point to the performance sandbox.
+PSandbox *create_psandbox(float rule);
+
 int release_psandbox(PSandbox *pSandbox);
 
 /// @brief Update an event to the performance sandbox
@@ -84,8 +92,8 @@ int release_psandbox(PSandbox *pSandbox);
 /// @return On success 0 is returned.
 int update_psandbox(struct sandboxEvent event, PSandbox *sandbox);
 
-int active_psandbox(PSandbox *pSandbox);
-int freeze_psandbox(PSandbox *pSandbox);
+void active_psandbox(PSandbox *pSandbox);
+void freeze_psandbox(PSandbox *pSandbox);
 struct pSandbox *get_psandbox();
 
 /// @brief Update the queue condition to enter the queue
@@ -93,8 +101,14 @@ struct pSandbox *get_psandbox();
 /// @param cond The condition for the current queue
 /// @return On success 0 is returned.
 /// The function must be called right after the try queue update
-int pbox_update_condition(int *keys, Condition cond);
+int psandbox_update_condition(int *keys, Condition cond);
 
+/// @brief Find the sandbox that need this resource most to run first
+/// @param key The key of the queue
+/// @param cond The condition for the current queue
+/// @return On success 0 is returned.
+/// The function must be called right after the try queue update
+void psandbox_schedule();
 #ifdef __cplusplus
 }
 #endif

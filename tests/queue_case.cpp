@@ -51,7 +51,7 @@ void srv_conc_enter_innodb(){
   struct sandboxEvent event;
   PSandbox *psandbox = get_psandbox();
 
-  event.event_type = START_QUEUE;
+  event.event_type = PREPARE_QUEUE;
   event.key_type = INTEGER;
   event.key = &n_active;
   update_psandbox(event, psandbox);
@@ -59,7 +59,7 @@ void srv_conc_enter_innodb(){
   Condition cond;
   cond.value = 0;
   cond.compare = COND_LARGE;
-  pbox_update_condition(&n_active,cond);
+  psandbox_update_condition(&n_active, cond);
 
   for (;;) {
     int	sleep_in_us;
@@ -87,7 +87,7 @@ void srv_conc_enter_innodb(){
 
     sleep_in_us = srv_thread_sleep_delay;
     os_thread_sleep(sleep_in_us);
-    event.event_type = TRY_QUEUE;
+    event.event_type = RETRY_QUEUE;
     event.key_type = INTEGER;
     event.key = &n_active;
     update_psandbox(event, psandbox);
