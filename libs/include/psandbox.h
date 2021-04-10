@@ -15,10 +15,14 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdbool.h>
+#include <pthread.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+#define NSEC_PER_SEC	1000000000L
 
 enum enum_event_type {
   PREPARE_QUEUE,
@@ -79,6 +83,8 @@ typedef struct sandboxEvent {
   enum enum_key_type key_type;
 } BoxEvent;
 
+static time_t total_time;
+static long box_count;
 /// @brief Create a performance sandbox
 /// @param rule The rule to apply performance interference rule that the performance sandbox need to satisfy.
 /// @return The point to the performance sandbox.

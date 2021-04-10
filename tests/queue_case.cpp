@@ -81,7 +81,7 @@ void srv_conc_enter_innodb(){
 
         return;
       }
-      (void) os_atomic_increment(
+      (void) os_atomic_decrement(
           &n_active, 1);
     }
 
