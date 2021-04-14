@@ -77,6 +77,7 @@ typedef struct sandboxEvent {
   enum enum_event_type event_type;
   void* key;
   enum enum_key_type key_type;
+  int key_size;
 } BoxEvent;
 
 /// @brief Create a performance sandbox
