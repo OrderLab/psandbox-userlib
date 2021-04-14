@@ -169,6 +169,7 @@ int update_psandbox(struct sandboxEvent event, PSandbox *psandbox) {
       switch (cond->compare) {
         case COND_LARGE:
           if (*(int*)event.key <= cond->value) {
+            printf("wake up .. %d, %d\n", *(int*)event.key, cond->value);
             wakeup_competitor(competitors,psandbox);
           }
           break;
@@ -195,6 +196,8 @@ int update_psandbox(struct sandboxEvent event, PSandbox *psandbox) {
       int success;
       time_t executing_tm, delayed_tm;
       struct timespec current_time;
+
+      //printf("--- pboxlib:  retry queue\n");
 
       competitors = hashmap_get(&competed_sandbox_set, key);
 
@@ -250,7 +253,8 @@ int update_psandbox(struct sandboxEvent event, PSandbox *psandbox) {
 
           if(syscall(SYS_UPDATE_PSANDBOX, competitor_sandbox->bid, RETRY_QUEUE, 0) == 1) {
             cond->temp_value = *(int*)event.key;
-            (*(int*)(event.key))--;
+            // FIXME why -- to key since you basically replace that box w/ this one
+            // (*(int*)(event.key))--;
             psandbox->psandbox = competitor_sandbox;
             psandbox->activity->is_preempted = 1;
             break;
@@ -308,6 +312,7 @@ int update_psandbox(struct sandboxEvent event, PSandbox *psandbox) {
         }
 
         (*(int*)event.key) = cond->temp_value;
+        printf("... wake up p->p->bid\n");
         syscall(SYS_WAKEUP_PSANDBOX, psandbox->psandbox->bid);
       }
       break;
