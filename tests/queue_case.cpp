@@ -54,7 +54,7 @@ void srv_conc_enter_innodb(){
   event.event_type = PREPARE_QUEUE;
   event.key_type = INTEGER;
   event.key = &n_active;
-  update_psandbox(event, psandbox);
+  update_psandbox(&event, psandbox);
 
   Condition cond;
   cond.value = 0;
@@ -71,12 +71,12 @@ void srv_conc_enter_innodb(){
         event.event_type = ENTER_QUEUE;
         event.key_type = INTEGER;
         event.key = &n_active;
-        update_psandbox(event, psandbox);
+        update_psandbox(&event, psandbox);
 
         event.event_type = UPDATE_QUEUE_CONDITION;
         event.key = &n_active;
         event.key_type = INTEGER;
-        update_psandbox(event, psandbox);
+        update_psandbox(&event, psandbox);
         pthread_mutex_unlock(&mutex);
 
         return;
@@ -90,7 +90,7 @@ void srv_conc_enter_innodb(){
     event.event_type = RETRY_QUEUE;
     event.key_type = INTEGER;
     event.key = &n_active;
-    update_psandbox(event, psandbox);
+    update_psandbox(&event, psandbox);
   }
 
 }
@@ -116,12 +116,12 @@ void* do_handle_one_connection(void* arg) {
     event.event_type = UPDATE_QUEUE_CONDITION;
     event.key_type = INTEGER;
     event.key = &n_active;
-    update_psandbox(event, psandbox);
+    update_psandbox(&event, psandbox);
 
     event.event_type = EXIT_QUEUE;
     event.key_type = INTEGER;
     event.key = &n_active;
-    update_psandbox(event, psandbox);
+    update_psandbox(&event, psandbox);
 
     freeze_psandbox(psandbox);
   }

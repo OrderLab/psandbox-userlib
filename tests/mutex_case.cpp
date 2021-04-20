@@ -87,7 +87,7 @@ void row_search_mysql(int id, PSandbox* psandbox) {
   event.event_type = MUTEX_REQUIRE;
   event.key_type = MUTEX;
   event.key = &mutex;
-  update_psandbox(event, psandbox);
+  update_psandbox(&event, psandbox);
 
   pthread_mutex_lock(&mutex);
 //  printf("call row_search_mysql tid = %d, id = %d\n", syscall(SYS_gettid),id);
@@ -95,7 +95,7 @@ void row_search_mysql(int id, PSandbox* psandbox) {
   event.event_type = MUTEX_GET;
   event.key_type = MUTEX;
   event.key = &mutex;
-  update_psandbox(event, psandbox);
+  update_psandbox(&event, psandbox);
 
   if(id == 0) {
     os_thread_sleep(2000000);
@@ -108,7 +108,7 @@ void row_search_mysql(int id, PSandbox* psandbox) {
   event.event_type = MUTEX_RELEASE;
   event.key_type = MUTEX;
   event.key = &mutex;
-  update_psandbox(event, psandbox);
+  update_psandbox(&event, psandbox);
 }
 
 void* do_handle_one_connection(void* arg) {

@@ -37,12 +37,13 @@ enum enum_event_type {
   MUTEX_RELEASE
 };
 
+
 enum enum_key_type {
   INTEGER, FLOAT, LONGLONG, MUTEX
 };
 
 enum enum_psandbox_state {
-  BOX_ACTIVE, BOX_FREEZE, BOX_START
+  BOX_ACTIVE, BOX_FREEZE, BOX_START, BOX_PENALIZED
 };
 
 enum enum_condition {
@@ -83,8 +84,6 @@ typedef struct sandboxEvent {
   enum enum_key_type key_type;
 } BoxEvent;
 
-static time_t total_time;
-static long box_count;
 /// @brief Create a performance sandbox
 /// @param rule The rule to apply performance interference rule that the performance sandbox need to satisfy.
 /// @return The point to the performance sandbox.
@@ -96,7 +95,7 @@ int release_psandbox(PSandbox *pSandbox);
 /// @param event The event to notify the performance sandbox.
 /// @param sandbox The sandbox to notify
 /// @return On success 0 is returned.
-int update_psandbox(struct sandboxEvent event, PSandbox *sandbox);
+int update_psandbox(struct sandboxEvent *event, PSandbox *sandbox);
 
 void active_psandbox(PSandbox *pSandbox);
 void freeze_psandbox(PSandbox *pSandbox);
