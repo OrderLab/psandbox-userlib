@@ -22,7 +22,7 @@
 pthread_mutex_t mutex;
 
 int n_active = 0;
-int srv_thread_concurrency = 2;
+int srv_thread_concurrency = 1;
 int srv_thread_sleep_delay	= 100000;
 
 
@@ -33,6 +33,7 @@ void os_thread_sleep(int tm);
 int main() {
   return mysqld_main();
 }
+
 
 void
 os_thread_sleep(
@@ -50,13 +51,13 @@ os_thread_sleep(
 void srv_conc_enter_innodb(){
   struct sandboxEvent event;
   PSandbox *psandbox = get_psandbox();
+  // FIXME handle pbox pointer can be NULL
 
   event.event_type = PREPARE_QUEUE;
   event.key_type = INTEGER;
   event.key = &n_active;
   event.key_size = srv_thread_concurrency;
   update_psandbox(event, psandbox);
-
 
   Condition cond;
   cond.value = 0;
@@ -71,7 +72,9 @@ void srv_conc_enter_innodb(){
     if (n_active < srv_thread_concurrency) {
       int active = os_atomic_increment(
           &n_active, 1);
+      //printf("try to enter queue (inc)> %d\n", n_active);
       if (active <= srv_thread_concurrency) {
+        //printf("entered queue yeah > %d\n", n_active);
         event.event_type = ENTER_QUEUE;
         event.key_type = INTEGER;
         event.key = &n_active;
@@ -89,7 +92,10 @@ void srv_conc_enter_innodb(){
       }
       (void) os_atomic_decrement(
           &n_active, 1);
+      //printf("!!!! not entered queue oh no (dec)> %d\n", n_active);
     }
+
+    // TODO why have a retry event??
 
     sleep_in_us = srv_thread_sleep_delay;
     os_thread_sleep(sleep_in_us);
@@ -120,6 +126,7 @@ void* do_handle_one_connection(void* arg) {
     }
 
     (void) os_atomic_decrement(&n_active, 1);
+
     event.event_type = UPDATE_QUEUE_CONDITION;
     event.key_type = INTEGER;
     event.key = &n_active;

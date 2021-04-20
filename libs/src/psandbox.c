@@ -209,10 +209,13 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *psandbox) {
       pthread_mutex_unlock(&stats_mutex);
       break;
     case RETRY_QUEUE: {
+      if (event.key_size <= 1) break;
+
       Condition *cond;
       int success;
       time_t executing_tm, delayed_tm;
       struct timespec current_time;
+      
       pthread_mutex_lock(&stats_mutex);
       competitors = hashmap_get(&competed_sandbox_set, key);
 
@@ -269,7 +272,11 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *psandbox) {
               || competitor_sandbox->state == BOX_PENALIZED || competitor_sandbox->activity->is_preempted == 1)
             continue;
 
-          if (syscall(SYS_PENALIZE_PSANDBOX, competitor_sandbox->bid, 0) == 1) {
+
+          if(syscall(SYS_UPDATE_PSANDBOX, competitor_sandbox->bid, RETRY_QUEUE, 0) == 1) {
+            // FIXME why -- to key since you basically replace that box w/ this one
+            // TODO still need this tmp value??? same in EXIT_QUEUE
+            cond->temp_value = *(int*)event.key;
             printf("thread %d sleep thread %d\n", psandbox->bid, competitor_sandbox->bid);
             cond->temp_value = *(int *) event->key;
             (*(int *) (event->key))--;
@@ -317,22 +324,52 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *psandbox) {
         }
 
       }
-      pthread_mutex_unlock(&stats_mutex);
-      if (psandbox->activity->is_preempted) {
-        pthread_mutex_lock(&stats_mutex);
-        cond = hashmap_get(&competitor_lists, key);
-        if (!cond) {
-          printf("Error: fail to find condition\n");
-          pthread_mutex_unlock(&stats_mutex);
-          return -1;
+      
+      
+      if (event.key_size > 1) {
+        if (psandbox->activity->is_preempted) {
+          cond = hashmap_get(&competitor_lists, key);
+          if(!cond) {
+            pthread_mutex_unlock(&stats_mutex);
+            printf("Error: fail to find condition\n");
+            return -1;
+          }
+
+          (*(int*)event.key) = cond->temp_value;
+          printf("thread %d wakeup thread %d\n", psandbox->bid, psandbox->psandbox->bid);
+          syscall(SYS_WAKEUP_PSANDBOX, psandbox->psandbox->bid);
+        }
+      } else {
+        // treat as a mutex release
+        struct linkedlist_element_s* node;
+        int delayed_competitors = 0;
+        time_t penalty_ns = 0;
+        struct timespec current_time;
+        time_t executing_tm, defer_tm;
+
+        for (node = competitors->head; node != NULL; node = node->next) {
+          PSandbox* competitor_sandbox = (PSandbox *)(node->data);
+          if (psandbox == node->data)
+            continue;
+
+          clock_gettime(CLOCK_REALTIME,&current_time);
+          executing_tm = current_time.tv_sec * NSEC_PER_SEC + current_time.tv_nsec -
+              psandbox->activity->execution_start.tv_sec * NSEC_PER_SEC - psandbox->activity->execution_start.tv_nsec;
+          defer_tm = current_time.tv_sec * NSEC_PER_SEC + current_time.tv_nsec  -
+              competitor_sandbox->activity->delaying_start.tv_sec * NSEC_PER_SEC - competitor_sandbox->activity->delaying_start.tv_nsec;
+
+          if (defer_tm >
+              (executing_tm - defer_tm) * psandbox->delay_ratio * list_size(competitors)) {
+            penalty_ns += defer_tm;
+            delayed_competitors++;
+          }
         }
 
-        (*(int *) event->key) = cond->temp_value;
-        pthread_mutex_unlock(&stats_mutex);
-        printf("thread %d wakeup thread %d\n", psandbox->bid, psandbox->psandbox->bid);
-        syscall(SYS_WAKEUP_PSANDBOX, psandbox->psandbox->bid);
+        if(delayed_competitors > 0) {
+          syscall(SYS_PENALIZE_PSANDBOX, 0,penalty_ns);
+        }
       }
-
+      pthread_mutex_unlock(&stats_mutex);
       break;
     }
     case MUTEX_REQUIRE: {
