@@ -57,6 +57,7 @@ void srv_conc_enter_innodb(){
   event.key_size = srv_thread_concurrency;
   update_psandbox(event, psandbox);
 
+
   Condition cond;
   cond.value = 0;
   cond.compare = COND_LARGE;

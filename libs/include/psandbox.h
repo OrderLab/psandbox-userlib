@@ -15,10 +15,14 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <stdbool.h>
+#include <pthread.h>
 
 #ifdef __cplusplus
 extern "C" {
 #endif
+
+
+#define NSEC_PER_SEC	1000000000L
 
 enum enum_event_type {
   PREPARE_QUEUE,
@@ -33,12 +37,13 @@ enum enum_event_type {
   MUTEX_RELEASE
 };
 
+
 enum enum_key_type {
   INTEGER, FLOAT, LONGLONG, MUTEX
 };
 
 enum enum_psandbox_state {
-  BOX_ACTIVE, BOX_FREEZE, BOX_START
+  BOX_ACTIVE, BOX_FREEZE, BOX_START, BOX_PENALIZED
 };
 
 enum enum_condition {
@@ -91,7 +96,7 @@ int release_psandbox(PSandbox *pSandbox);
 /// @param event The event to notify the performance sandbox.
 /// @param sandbox The sandbox to notify
 /// @return On success 0 is returned.
-int update_psandbox(struct sandboxEvent event, PSandbox *sandbox);
+int update_psandbox(struct sandboxEvent *event, PSandbox *sandbox);
 
 void active_psandbox(PSandbox *pSandbox);
 void freeze_psandbox(PSandbox *pSandbox);
