@@ -194,11 +194,14 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *psandbox) {
       }
       break;
     }
-    case SLEEP_BEGIN:psandbox->activity->queue_state = QUEUE_SLEEP;
+    case SLEEP_BEGIN:
+      psandbox->activity->queue_state = QUEUE_SLEEP;
       break;
-    case SLEEP_END:psandbox->activity->queue_state = QUEUE_AWAKE;
+    case SLEEP_END:
+      psandbox->activity->queue_state = QUEUE_AWAKE;
       break;
-    case PREPARE_QUEUE:pthread_mutex_lock(&stats_mutex);
+    case PREPARE_QUEUE:
+      pthread_mutex_lock(&stats_mutex);
       competitors = hashmap_get(&competed_sandbox_set, key);
       if (push_or_create_competitors(competitors, event, psandbox)) {
         printf("Error: fail to create competitor list\n");
@@ -209,7 +212,7 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *psandbox) {
       pthread_mutex_unlock(&stats_mutex);
       break;
     case RETRY_QUEUE: {
-      if (event.key_size <= 1) break;
+      if (event->key_size <= 1) break;
 
       Condition *cond;
       int success;
@@ -276,7 +279,7 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *psandbox) {
           if(syscall(SYS_UPDATE_PSANDBOX, competitor_sandbox->bid, RETRY_QUEUE, 0) == 1) {
             // FIXME why -- to key since you basically replace that box w/ this one
             // TODO still need this tmp value??? same in EXIT_QUEUE
-            cond->temp_value = *(int*)event.key;
+            cond->temp_value = *(int*)event->key;
             printf("thread %d sleep thread %d\n", psandbox->bid, competitor_sandbox->bid);
             cond->temp_value = *(int *) event->key;
             (*(int *) (event->key))--;
@@ -326,7 +329,7 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *psandbox) {
       }
       
       
-      if (event.key_size > 1) {
+      if (event->key_size > 1) {
         if (psandbox->activity->is_preempted) {
           cond = hashmap_get(&competitor_lists, key);
           if(!cond) {
@@ -335,7 +338,7 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *psandbox) {
             return -1;
           }
 
-          (*(int*)event.key) = cond->temp_value;
+          (*(int*)event->key) = cond->temp_value;
           printf("thread %d wakeup thread %d\n", psandbox->bid, psandbox->psandbox->bid);
           syscall(SYS_WAKEUP_PSANDBOX, psandbox->psandbox->bid);
         }
