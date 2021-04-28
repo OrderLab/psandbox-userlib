@@ -62,9 +62,10 @@ struct hashmap_element_s {
   unsigned key;
   int in_use;
   void *data;
+  int value;
 };
 
-/* A hashmap has some maximum size and current size, as well as the data to
+/* A hashmap has some maximum size and current size, as well as the sandbox to
  * hold. */
 typedef struct hashmap_s {
   unsigned table_size;
@@ -98,7 +99,7 @@ static int hashmap_create(const unsigned initial_size,
 /// The key string slice is not copied when creating the hashmap entry, and thus
 /// must remain a valid pointer until the hashmap entry is removed or the
 /// hashmap is destroyed.
-static int hashmap_put(struct hashmap_s *const hashmap, unsigned key, void *const value) HASHMAP_USED;
+static int hashmap_put(struct hashmap_s *const hashmap, unsigned key, void *const value, int flag) HASHMAP_USED;
 
 /// @brief Get an element from the hashmap.
 /// @param hashmap The hashmap to get from.
@@ -106,7 +107,7 @@ static int hashmap_put(struct hashmap_s *const hashmap, unsigned key, void *cons
 /// @param len The length of the string key.
 /// @return The previously set element, or NULL if none exists.
 static void *hashmap_get(const struct hashmap_s *const hashmap,
-                         unsigned key) HASHMAP_USED;
+                         unsigned key, int flag) HASHMAP_USED;
 
 /// @brief Remove an element from the hashmap.
 /// @param hashmap The hashmap to remove from.
@@ -115,26 +116,6 @@ static void *hashmap_get(const struct hashmap_s *const hashmap,
 /// @return On success 0 is returned.
 static int hashmap_remove(struct hashmap_s *const hashmap,
                           unsigned key) HASHMAP_USED;
-
-/// @brief Remove an element from the hashmap.
-/// @param hashmap The hashmap to remove from.
-/// @param key The string key to use.
-/// @param len The length of the string key.
-/// @return On success the original stored key pointer is returned, on failure
-/// NULL is returned.
-static const char *
-hashmap_remove_and_return_key(struct hashmap_s *const hashmap,
-                              unsigned key) HASHMAP_USED;
-
-/// @brief Iterate over all the elements in a hashmap.
-/// @param hashmap The hashmap to iterate over.
-/// @param f The function pointer to call on each element.
-/// @param context The context to pass as the first argument to f.
-/// @return If the entire hashmap was iterated then 0 is returned. Otherwise if
-/// the callback function f returned non-zero then non-zero is returned.
-static int hashmap_iterate(const struct hashmap_s *const hashmap,
-                           int (*f)(void *const context, void *const value),
-                           void *const context) HASHMAP_USED;
 
 /// @brief Iterate over all the elements in a hashmap.
 /// @param hashmap The hashmap to iterate over.
@@ -203,7 +184,7 @@ int hashmap_create(const unsigned initial_size,
   return 0;
 }
 
-int hashmap_put(struct hashmap_s *const m, unsigned key, void *const value) {
+int hashmap_put(struct hashmap_s *const m, unsigned key, void *const value, int flag) {
   unsigned int index;
 
   /* Find a place to put our value. */
@@ -213,8 +194,13 @@ int hashmap_put(struct hashmap_s *const m, unsigned key, void *const value) {
     }
   }
 
-  /* Set the data. */
-  m->data[index].data = value;
+  /* Set the sandbox. */
+  if(!flag) {
+    m->data[index].data = value;
+  } else {
+    m->data[index].value = *(int*)(value);
+  }
+
   m->data[index].key = key;
 
   /* If the hashmap element was not already in use, set that it is being used
@@ -227,18 +213,23 @@ int hashmap_put(struct hashmap_s *const m, unsigned key, void *const value) {
   return 0;
 }
 
-void *hashmap_get(const struct hashmap_s *const m, unsigned key) {
+void *hashmap_get(const struct hashmap_s *const m, unsigned key, int flag) {
   unsigned int curr;
   unsigned int i;
 
-  /* Find data location */
+  /* Find sandbox location */
   curr = hashmap_hash_helper_int_helper(m, key);
 
   /* Linear probing, if necessary */
   for (i = 0; i < HASHMAP_MAX_CHAIN_LENGTH; i++) {
     if (m->data[curr].in_use) {
       if (hashmap_match_helper(&m->data[curr], key)) {
-        return m->data[curr].data;
+        if (!flag) {
+          return m->data[curr].data;
+        } else {
+          return &m->data[curr].value;
+        }
+
       }
     }
 
@@ -276,50 +267,6 @@ int hashmap_remove(struct hashmap_s *const m, unsigned key) {
   return 1;
 }
 
-const char *hashmap_remove_and_return_key(struct hashmap_s *const m,unsigned key) {
-  unsigned int i;
-  unsigned int curr;
-
-  /* Find key */
-  curr = hashmap_hash_helper_int_helper(m, key);
-
-  /* Linear probing, if necessary */
-  for (i = 0; i < HASHMAP_MAX_CHAIN_LENGTH; i++) {
-    if (m->data[curr].in_use) {
-      if (hashmap_match_helper(&m->data[curr], key)) {
-        const char *const stored_key = m->data[curr].key;
-
-        /* Blank out the fields */
-        m->data[curr].in_use = 0;
-        m->data[curr].data = HASHMAP_NULL;
-        m->data[curr].key = HASHMAP_NULL;
-
-        /* Reduce the size */
-        m->size--;
-
-        return stored_key;
-      }
-    }
-    curr = (curr + 1) % m->table_size;
-  }
-
-  return HASHMAP_NULL;
-}
-
-int hashmap_iterate(const struct hashmap_s *const m,
-                    int (*f)(void *const, void *const), void *const context) {
-  unsigned int i;
-
-  /* Linear probing */
-  for (i = 0; i < m->table_size; i++) {
-    if (m->data[i].in_use) {
-      if (!f(context, m->data[i].data)) {
-        return 1;
-      }
-    }
-  }
-  return 0;
-}
 
 int hashmap_iterate_pairs(struct hashmap_s *const hashmap,
                           int (*f)(void *const,
@@ -429,7 +376,7 @@ int hashmap_hash_helper(const struct hashmap_s *const m, unsigned key, unsigned 
 
 int hashmap_rehash_iterator(void *const new_hash,
                             struct hashmap_element_s *const e) {
-  int temp = hashmap_put(HASHMAP_PTR_CAST(struct hashmap_s *, new_hash), e->key, e->data);
+  int temp = hashmap_put(HASHMAP_PTR_CAST(struct hashmap_s *, new_hash), e->key, e->data,0);
   if (0 < temp) {
     return 1;
   }

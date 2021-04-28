@@ -90,7 +90,6 @@ void log_write_up_to(ibool flush_to_disk) {
     PSandbox *sandbox = get_psandbox();
 
     event.event_type = PREPARE_QUEUE;
-    event.key_type = INTEGER;
     event.key = &n_pending_flushes;
     update_psandbox(&event, sandbox);
 
@@ -106,13 +105,11 @@ retry:
 
 
       event.event_type = SLEEP_BEGIN;
-      event.key_type = INTEGER;
       event.key = &n_pending_flushes;
       update_psandbox(&event, sandbox);
       os_thread_sleep(5000000);
       event.event_type = SLEEP_END;
       event.key = &n_pending_flushes;
-      event.key_type = INTEGER;
       update_psandbox(&event, sandbox);
 
       pthread_mutex_lock(&mutex);
@@ -121,7 +118,6 @@ retry:
     }
 
     event.event_type = ENTER_QUEUE;
-    event.key_type = INTEGER;
     event.key = &n_pending_flushes;
     update_psandbox(&event, sandbox);
 
@@ -129,7 +125,6 @@ retry:
 
     event.event_type = UPDATE_QUEUE_CONDITION;
     event.key = &n_pending_flushes;
-    event.key_type = INTEGER;
     update_psandbox(&event, sandbox);
     pthread_mutex_unlock(&mutex);
 
@@ -147,12 +142,10 @@ retry:
     pthread_mutex_unlock(&mutex);
 
     event.event_type = UPDATE_QUEUE_CONDITION;
-    event.key_type = INTEGER;
     event.key = &n_pending_flushes;
     update_psandbox(&event, sandbox);
 
     event.event_type = EXIT_QUEUE;
-    event.key_type = INTEGER;
     event.key = &n_pending_flushes;
     update_psandbox(&event, sandbox);
   }

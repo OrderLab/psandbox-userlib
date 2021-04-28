@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <pthread.h>
+#include "hashmap.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -37,13 +38,8 @@ enum enum_event_type {
   MUTEX_RELEASE
 };
 
-
-enum enum_key_type {
-  INTEGER, FLOAT, LONGLONG, MUTEX
-};
-
 enum enum_psandbox_state {
-  BOX_ACTIVE, BOX_FREEZE, BOX_START, BOX_PENALIZED
+  BOX_ACTIVE, BOX_FREEZE, BOX_START, BOX_PENALIZED,BOX_INTERFERED, BOX_PENDING_PENALTY
 };
 
 enum enum_condition {
@@ -59,7 +55,8 @@ typedef struct activity {
   struct timespec execution_start;
   struct timespec defer_time;
   struct timespec delaying_start;
-  int try_number;
+  HashMap delaying_starts;
+  int owned_mutex;
   int is_preempted;
 } Activity;
 
@@ -67,9 +64,11 @@ typedef struct pSandbox {
   long bid;    // sandbox id used by syscalls
   enum enum_psandbox_state state;
   Activity *activity;
-  pid_t tid;
   float delay_ratio;
-  struct pSandbox *psandbox;
+  struct pSandbox *noisy_neighbor;
+  struct pSandbox *victim;
+  int counts[1000];
+  int _count;
 } PSandbox;
 
 typedef struct condition {
@@ -81,7 +80,6 @@ typedef struct condition {
 typedef struct sandboxEvent {
   enum enum_event_type event_type;
   void* key;
-  enum enum_key_type key_type;
   int key_size;
 } BoxEvent;
 
@@ -92,11 +90,11 @@ PSandbox *create_psandbox(float rule);
 
 int release_psandbox(PSandbox *pSandbox);
 
-/// @brief Update an event to the performance sandbox
-/// @param event The event to notify the performance sandbox.
-/// @param sandbox The sandbox to notify
+/// @brief Update an event to the performance p_sandbox
+/// @param event The event to notify the performance p_sandbox.
+/// @param p_sandbox The p_sandbox to notify
 /// @return On success 0 is returned.
-int update_psandbox(struct sandboxEvent *event, PSandbox *sandbox);
+int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox);
 
 void active_psandbox(PSandbox *pSandbox);
 void freeze_psandbox(PSandbox *pSandbox);
@@ -110,11 +108,11 @@ struct pSandbox *get_psandbox();
 int psandbox_update_condition(int *keys, Condition cond);
 
 /// @brief Find the sandbox that need this resource most to run first
-/// @param key The key of the queue
-/// @param cond The condition for the current queue
-/// @return On success 0 is returned.
-/// The function must be called right after the try queue update
-void psandbox_schedule();
+/// @param sandbox that needs to be checked
+/// @return On interference 1 is returned.
+int psandbox_schedule();
+
+void print_all();
 #ifdef __cplusplus
 }
 #endif

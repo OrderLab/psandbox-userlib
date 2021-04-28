@@ -52,7 +52,6 @@ void srv_conc_enter_innodb(){
   PSandbox *psandbox = get_psandbox();
 
   event.event_type = PREPARE_QUEUE;
-  event.key_type = INTEGER;
   event.key = &n_active;
   event.key_size = srv_thread_concurrency;
   update_psandbox(&event, psandbox);
@@ -73,14 +72,12 @@ void srv_conc_enter_innodb(){
           &n_active, 1);
       if (active <= srv_thread_concurrency) {
         event.event_type = ENTER_QUEUE;
-        event.key_type = INTEGER;
         event.key = &n_active;
         event.key_size = srv_thread_concurrency;
         update_psandbox(&event, psandbox);
 
         event.event_type = UPDATE_QUEUE_CONDITION;
         event.key = &n_active;
-        event.key_type = INTEGER;
         event.key_size = srv_thread_concurrency;
         update_psandbox(&event, psandbox);
         pthread_mutex_unlock(&mutex);
@@ -93,8 +90,8 @@ void srv_conc_enter_innodb(){
 
     sleep_in_us = srv_thread_sleep_delay;
     os_thread_sleep(sleep_in_us);
+
     event.event_type = RETRY_QUEUE;
-    event.key_type = INTEGER;
     event.key = &n_active;
     event.key_size = srv_thread_concurrency;
     update_psandbox(&event, psandbox);
@@ -121,13 +118,11 @@ void* do_handle_one_connection(void* arg) {
 
     (void) os_atomic_decrement(&n_active, 1);
     event.event_type = UPDATE_QUEUE_CONDITION;
-    event.key_type = INTEGER;
     event.key = &n_active;
     event.key_size = srv_thread_concurrency;
     update_psandbox(&event, psandbox);
 
     event.event_type = EXIT_QUEUE;
-    event.key_type = INTEGER;
     event.key = &n_active;
     event.key_size = srv_thread_concurrency;
     update_psandbox(&event, psandbox);
@@ -143,6 +138,7 @@ void create_new_thread(){
   pthread_t threads[NUM_THREADS];
   int arg[NUM_THREADS];
   int i;
+
   pthread_mutex_init(&mutex, NULL);
 
   for(i = 0; i<NUM_THREADS;i++) {
