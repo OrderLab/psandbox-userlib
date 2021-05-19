@@ -151,6 +151,7 @@ hashmap_rehash_iterator(void *const new_hash,
                         struct hashmap_element_s *const e) HASHMAP_USED;
 static int hashmap_rehash_helper(struct hashmap_s *const m) HASHMAP_USED;
 
+static void hashmap_clear(struct hashmap_s *const m);
 #if defined(__cplusplus)
 }
 #endif
@@ -299,6 +300,18 @@ int hashmap_iterate_pairs(struct hashmap_s *const hashmap,
 void hashmap_destroy(struct hashmap_s *const m) {
   free(m->data);
   memset(m, 0, sizeof(struct hashmap_s));
+}
+
+void hashmap_clear(struct hashmap_s *const m){
+  free(m->data);
+  m->data =
+      HASHMAP_CAST(struct hashmap_element_s *,
+                   calloc(m->table_size, sizeof(struct hashmap_element_s)));
+  if (!m->data) {
+    return;
+  }
+  m->size = 0;
+  return ;
 }
 
 unsigned hashmap_num_entries(const struct hashmap_s *const m) {

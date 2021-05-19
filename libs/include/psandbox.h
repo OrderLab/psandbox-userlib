@@ -37,9 +37,14 @@ enum enum_event_type {
   MUTEX_GET,
   MUTEX_RELEASE
 };
-
+//Add comment for each enum type to describe the semantic and the constrains of the action for that state
 enum enum_psandbox_state {
-  BOX_ACTIVE, BOX_FREEZE, BOX_START, BOX_PENALIZED,BOX_INTERFERED, BOX_PENDING_PENALTY
+  BOX_ACTIVE, //
+  BOX_FREEZE, //
+  BOX_START, //
+  BOX_PENALIZED,//
+  BOX_INTERFERED, //
+  BOX_PENDING_PENALTY //
 };
 
 enum enum_condition {
@@ -47,8 +52,14 @@ enum enum_condition {
 };
 
 enum enum_queue_state {
-  QUEUE_NULL,QUEUE_ENTER,QUEUE_SLEEP,QUEUE_AWAKE,QUEUE_EXIT
+  QUEUE_NULL,QUEUE_ENTER,QUEUE_SLEEP,QUEUE_AWAKE,QUEUE_EXIT,SHOULD_ENTER
 };
+
+typedef struct sandboxEvent {
+  enum enum_event_type event_type;
+  void* key;
+  int key_size;
+} BoxEvent;
 
 typedef struct activity {
   enum enum_queue_state queue_state;
@@ -56,8 +67,10 @@ typedef struct activity {
   struct timespec defer_time;
   struct timespec delaying_start;
   HashMap delaying_starts;
-  int owned_mutex;
+  int owned_mutex; //TODO: use a slab to store each element and get one from the pool when you need to use it.
   int is_preempted;
+  int queue_event;
+  void *key;
 } Activity;
 
 typedef struct pSandbox {
@@ -69,6 +82,8 @@ typedef struct pSandbox {
   struct pSandbox *victim;
   int counts[1000];
   int _count;
+  int small_counts[10];
+  int sandbox_flag;
 } PSandbox;
 
 typedef struct condition {
@@ -77,11 +92,7 @@ typedef struct condition {
   int temp_value;
 } Condition;
 
-typedef struct sandboxEvent {
-  enum enum_event_type event_type;
-  void* key;
-  int key_size;
-} BoxEvent;
+
 
 /// @brief Create a performance sandbox
 /// @param rule The rule to apply performance interference rule that the performance sandbox need to satisfy.
@@ -112,7 +123,9 @@ int psandbox_update_condition(int *keys, Condition cond);
 /// @return On interference 1 is returned.
 int psandbox_schedule();
 
-void print_all();
+int track_mutex(struct sandboxEvent *event, PSandbox *p_sandbox);
+
+    void print_all();
 #ifdef __cplusplus
 }
 #endif
