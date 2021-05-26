@@ -48,6 +48,8 @@ typedef struct competitor_list {
   struct competitor_node *head;
 } Competitor_list;
 
+long max;
+
 /// @brief Check whether the current sandbox is interfered by other noisy_neighbor
 /// @param key The key of the queue
 /// @param cond The condition for the current queue
@@ -59,6 +61,9 @@ int is_interfered(PSandbox *pSandbox, Competitor_list *competitors, unsigned lon
 /// @param competitors the competitors of the p_sandbox
 /// @return The bid of the noisy neighbor
 long find_noisyNeighbor(PSandbox *p_sandbox, Competitor_list *competitors, unsigned long key);
+
+
+time_t get_penalty(PSandbox *psandbox, Competitor_list *competitors, unsigned long key);
 
 // Insert an node into the head of competitor list.
 int list_push_front(Competitor_list *const linkedlist, PSandbox *const value) {
@@ -144,7 +149,9 @@ int list_remove(Competitor_list *const linkedlist, long bid) {
     //bypass the current link
     previous->next = current_list->next;
   }
+//  printf("prepare to remove the list\n");
   linkedlist->size--;
+//  printf("prepare to free the list\n");
   free(current_list);
 
   return 0;
@@ -181,7 +188,8 @@ PSandbox *create_psandbox(float rule) {
       return NULL;
     }
   }
-
+  if (sandbox_id > max)
+    max = sandbox_id;
   hashmap_put(&psandbox_map, sandbox_id, psandbox, DIRECT);
   return psandbox;
 }
@@ -218,6 +226,9 @@ int push_or_create_competitors(Competitor_list *competitors, struct sandboxEvent
     hashmap_put(&competitors_map, key, competitors, DIRECT);
   } else {
     if (!list_find(competitors, new_competitor->bid)) {
+      success = list_push_front(competitors, new_competitor);
+    } else {
+      list_remove(competitors,new_competitor->bid);
       success = list_push_front(competitors, new_competitor);
     }
   }
@@ -384,13 +395,17 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox) {
     case PREPARE_QUEUE: {
       pthread_mutex_lock(&stats_mutex);
       competitors = hashmap_get(&competitors_map, key, DIRECT);
+
+      clock_gettime(CLOCK_REALTIME, &p_sandbox->activity->delaying_start);
+
+      hashmap_put(&p_sandbox->activity->delaying_starts, key, &p_sandbox->activity->delaying_start, INDIRECT);
+
+      //move the adding part after the push to fix the bug
       if (push_or_create_competitors(competitors, event, p_sandbox)) {
         printf("Error: fail to create competitor list\n");
         pthread_mutex_unlock(&stats_mutex);
         return -1;
       }
-      clock_gettime(CLOCK_REALTIME, &p_sandbox->activity->delaying_start);
-      hashmap_put(&p_sandbox->activity->delaying_starts, key, &p_sandbox->activity->delaying_start, INDIRECT);
       pthread_mutex_unlock(&stats_mutex);
 
       break;
@@ -398,8 +413,6 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox) {
     case RETRY_QUEUE: {
       if (event->key_size == 1) break;
       pthread_mutex_lock(&stats_mutex);
-
-
 
       competitors = hashmap_get(&competitors_map, key, DIRECT);
 
@@ -463,18 +476,24 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox) {
       p_sandbox->activity->defer_time.tv_sec += current_time.tv_sec - delaying_start->tv_sec;
       p_sandbox->activity->defer_time.tv_nsec += current_time.tv_nsec - delaying_start->tv_nsec;
       pthread_mutex_unlock(&stats_mutex);
+
+
       break;
     }
     case EXIT_QUEUE: {
       pthread_mutex_lock(&stats_mutex);
+      time_t penalty_ns;
       p_sandbox->activity->queue_state = QUEUE_EXIT;
+
       competitors = hashmap_get(&competitors_map, key, DIRECT);
       if (!competitors) {
         printf("Error: fail to create competitor list \n");
         pthread_mutex_unlock(&stats_mutex);
         return -1;
       }
-
+//      if (!list_find(competitors,p_sandbox->bid)) {
+//        printf("can't find the bid %d\n",p_sandbox->bid);
+//      }
       if (list_remove(competitors, p_sandbox->bid)) {
         printf("Error: fail to remove competitors list\n");
         pthread_mutex_unlock(&stats_mutex);
@@ -510,6 +529,14 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox) {
           p_sandbox->victim->noisy_neighbor = 0;
           p_sandbox->victim = 0;
           p_sandbox->activity->is_preempted = 0;
+        }
+
+        penalty_ns = get_penalty(p_sandbox,competitors,key);
+        pthread_mutex_unlock(&stats_mutex);
+        if (penalty_ns > 1000000) {
+          penalty_ns = 10000000;
+//          printf("call penalty for psandbox %d\n",p_sandbox->bid);
+          syscall(SYS_PENALIZE_PSANDBOX, 0, penalty_ns);
         }
       } else {
         // treat as a mutex release
@@ -578,11 +605,7 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox) {
       break;
     }
     case MUTEX_RELEASE: {
-      struct competitor_node *node;
-      int delayed_competitors = 0;
       time_t penalty_ns = 0;
-      struct timespec current_time;
-      time_t executing_tm, defer_tm;
 
       pthread_mutex_lock(&stats_mutex);
       competitors = hashmap_get(&competitors_map, key, DIRECT);
@@ -627,41 +650,17 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox) {
       }
 
 
-      for (node = competitors->head; node != NULL; node = node->next) {
-        PSandbox *competitor = node->p_sandbox;
-        struct timespec *delaying_start;
-
-        if (p_sandbox == node->p_sandbox)
-          continue;
-
-        clock_gettime(CLOCK_REALTIME, &current_time);
-        delaying_start = (struct timespec *) hashmap_get(&competitor->activity->delaying_starts,
-                                                         key,
-                                                         INDIRECT);
-        executing_tm = current_time.tv_sec * NSEC_PER_SEC + current_time.tv_nsec -
-            p_sandbox->activity->execution_start.tv_sec * NSEC_PER_SEC - p_sandbox->activity->execution_start.tv_nsec;
-        defer_tm = current_time.tv_sec * NSEC_PER_SEC + current_time.tv_nsec -
-            delaying_start->tv_sec * NSEC_PER_SEC
-            - delaying_start->tv_nsec;
-
-        if (defer_tm >
-            (executing_tm - defer_tm) * p_sandbox->delay_ratio * list_size(competitors)) {
-          penalty_ns += defer_tm;
-          delayed_competitors++;
-        }
-      }
+      penalty_ns = get_penalty(p_sandbox,competitors,key);
       pthread_mutex_unlock(&stats_mutex);
-      if (delayed_competitors > 0 && penalty_ns > 100000) {
+      if (penalty_ns > 100000) {
         penalty_ns = 100000;
         syscall(SYS_PENALIZE_PSANDBOX, 0, penalty_ns);
       }
 
       break;
     }
-
     default:break;
   }
-
   return success;
 }
 
@@ -692,6 +691,50 @@ int psandbox_update_condition(int *keys, Condition cond) {
   return 0;
 }
 
+time_t get_penalty(PSandbox *psandbox, Competitor_list *competitors, unsigned long key) {
+  struct competitor_node *node;
+  struct timespec current_time;
+  time_t executing_tm, defer_tm;
+  time_t penalty_ns = -1;
+  for (node = competitors->head; node != NULL; node = node->next) {
+    PSandbox *competitor = node->p_sandbox;
+    struct timespec *delaying_start;
+
+    if(competitor == NULL)
+      continue;
+
+    if (psandbox == competitor || competitor->activity->queue_state == QUEUE_ENTER
+        || competitor->state == BOX_PENALIZED || competitor->activity->is_preempted == 1
+        || competitor->state == BOX_INTERFERED || competitor->state == BOX_PENDING_PENALTY)
+      continue;
+
+    clock_gettime(CLOCK_REALTIME, &current_time);
+    delaying_start = (struct timespec *) hashmap_get(&competitor->activity->delaying_starts,
+                                                     key,
+                                                     INDIRECT);
+
+
+    if (!delaying_start) {
+      printf("the owner is %lu, the delaying_start is %d, the key is %lu, the competitor is %lu, the list size is %d, the status is %d\n",psandbox->bid,
+             delaying_start, key,competitor->bid,
+             competitor->activity->delaying_starts.size,competitor->state);
+      return 0;
+    }
+
+    executing_tm = current_time.tv_sec * NSEC_PER_SEC + current_time.tv_nsec -
+        competitor->activity->execution_start.tv_sec * NSEC_PER_SEC - competitor->activity->execution_start.tv_nsec;
+    defer_tm = current_time.tv_sec * NSEC_PER_SEC + current_time.tv_nsec -
+        delaying_start->tv_sec * NSEC_PER_SEC
+        - delaying_start->tv_nsec;
+
+    if (defer_tm >
+        (executing_tm - defer_tm) * psandbox->delay_ratio * list_size(competitors)) {
+      penalty_ns += defer_tm;
+    }
+  }
+  return penalty_ns;
+}
+
 int is_interfered(PSandbox *psandbox, Competitor_list *competitors, unsigned long key) {
   time_t executing_tm, delayed_tm;
   struct timespec current_time;
@@ -700,11 +743,10 @@ int is_interfered(PSandbox *psandbox, Competitor_list *competitors, unsigned lon
   if (!psandbox)
     return 0;
 
-  if (psandbox->state == BOX_INTERFERED || psandbox->state == BOX_PENDING_PENALTY)
+  if (psandbox->state == BOX_INTERFERED || psandbox->state == BOX_PENDING_PENALTY || psandbox->activity->queue_state == QUEUE_ENTER)
     return 0;
 
   clock_gettime(CLOCK_REALTIME, &current_time);
-
   delaying_start = (struct timespec *) hashmap_get(&psandbox->activity->delaying_starts,
                                                    key,
                                                    INDIRECT);
@@ -722,12 +764,9 @@ int is_interfered(PSandbox *psandbox, Competitor_list *competitors, unsigned lon
   return 0;
 }
 
-
 //TODO: find the most noisy neighbor
 long find_noisyNeighbor(PSandbox *p_sandbox, Competitor_list *competitors, unsigned long key) {
   struct competitor_node *node;
-  struct timespec current_time;
-  struct timespec *delaying_start;
 
   for (node = competitors->head; node != NULL; node = node->next) {
     PSandbox *competitor = node->p_sandbox;
@@ -758,6 +797,7 @@ void freeze_psandbox(PSandbox *psandbox) {
     return;
   psandbox->state = BOX_FREEZE;
   memset(psandbox->activity, 0, sizeof(Activity));
+//  printf("call freeze by id %d\n",psandbox->bid);
 }
 
 PSandbox *get_psandbox() {
