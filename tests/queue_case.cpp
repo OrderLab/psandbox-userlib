@@ -57,10 +57,10 @@ void srv_conc_enter_innodb(){
   update_psandbox(&event, psandbox);
 
 
-  Condition cond;
-  cond.value = 0;
-  cond.compare = COND_LARGE;
-  psandbox_update_condition(&n_active, cond);
+//  Condition cond;
+//  cond.value = 0;
+//  cond.compare = COND_LARGE;
+//  psandbox_update_condition(&n_active, cond);
 
   pthread_mutex_lock(&mutex);
 
