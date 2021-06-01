@@ -152,7 +152,7 @@ retry:
 }
 
 void* do_handle_one_connection(void* arg) {
-  PSandbox* box = create_psandbox(1);
+  PSandbox* box = create_psandbox();
 
   for(int i = 0; i < 1; i++) {
     active_psandbox(box);

@@ -109,7 +109,7 @@ void row_search_mysql(int id, PSandbox* psandbox) {
 }
 
 void* do_handle_one_connection(void* arg) {
-  PSandbox* box = create_psandbox(1);
+  PSandbox* box = create_psandbox();
   int id = *(int *)arg;
 //  printf("create box %d\n",syscall(SYS_gettid));
   for(int i = 0; i < 1; i++) {

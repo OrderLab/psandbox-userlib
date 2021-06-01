@@ -126,7 +126,7 @@ void* do_handle_one_connection(void* arg) {
   if ( id == 0) {
     os_thread_sleep(4000000);
   }
-  PSandbox* box = create_psandbox(1);
+  PSandbox* box = create_psandbox();
 
 //  printf("create box %d\n",syscall(SYS_gettid));
   for(int i = 0; i < 1; i++) {

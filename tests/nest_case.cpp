@@ -93,7 +93,7 @@ void srv_conc_enter_innodb(){
 void* do_handle_one_connection(void* arg) {
   BoxEvent event;
   int j = *(int *)arg;
-  PSandbox* psandbox = create_psandbox(1);
+  PSandbox* psandbox = create_psandbox();
 
   for(int i = 0; i < 1; i++) {
     active_psandbox(psandbox);

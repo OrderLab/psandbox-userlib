@@ -16,7 +16,7 @@
 #include <sys/types.h>
 #include <stdbool.h>
 #include <pthread.h>
-#include "hashmap.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -55,18 +55,23 @@ enum enum_queue_state {
   QUEUE_NULL,QUEUE_ENTER,QUEUE_SLEEP,QUEUE_AWAKE,QUEUE_EXIT,SHOULD_ENTER
 };
 
+
 typedef struct sandboxEvent {
   enum enum_event_type event_type;
   void* key;
   int key_size;
 } BoxEvent;
 
+//typedef struct rule {
+//  int psandbox_type;
+//
+//} Rule;
+
 typedef struct activity {
   enum enum_queue_state queue_state;
   struct timespec execution_start;
   struct timespec defer_time;
   struct timespec delaying_start;
-  HashMap delaying_starts;
   int owned_mutex; //TODO: use a slab to store each element and get one from the pool when you need to use it.
   int is_preempted;
   int queue_event;
@@ -89,22 +94,25 @@ typedef struct pSandbox {
 typedef struct condition {
   int value;
   enum enum_condition compare;
-  int temp_value;
 } Condition;
 
 
 
 /// @brief Create a performance sandbox
-/// @param rule The rule to apply performance interference rule that the performance sandbox need to satisfy.
 /// @return The point to the performance sandbox.
-PSandbox *create_psandbox(float rule);
+PSandbox *create_psandbox();
 
+/// @brief release a performance sandbox
+/// @param pSandbox The performance sandbox to release.
+/// @return On success 1 is return
 int release_psandbox(PSandbox *pSandbox);
+
+//int add_rule(PSandbox *p_sandbox, )
 
 /// @brief Update an event to the performance p_sandbox
 /// @param event The event to notify the performance p_sandbox.
 /// @param p_sandbox The p_sandbox to notify
-/// @return On success 0 is returned.
+/// @return On success 1 is returned.
 int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox);
 
 void active_psandbox(PSandbox *pSandbox);
