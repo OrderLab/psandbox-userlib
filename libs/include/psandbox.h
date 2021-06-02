@@ -23,7 +23,8 @@ extern "C" {
 #endif
 
 
-#define NSEC_PER_SEC	1000000000L
+#define COMPENSATION_TICKET_NUMBER	100L
+#define PROBING_NUMBER 100
 
 enum enum_event_type {
   PREPARE_QUEUE,
@@ -37,21 +38,23 @@ enum enum_event_type {
   MUTEX_GET,
   MUTEX_RELEASE
 };
+
 //Add comment for each enum type to describe the semantic and the constrains of the action for that state
 enum enum_psandbox_state {
-  BOX_ACTIVE, //
-  BOX_FREEZE, //
-  BOX_START, //
-  BOX_PENALIZED,//
-  BOX_INTERFERED, //
-  BOX_PENDING_PENALTY //
+  BOX_ACTIVE, // psandbox starts to handle an activity
+  BOX_FREEZE, // psandbox finishs an activity
+  BOX_START, // create a psandbox
+  BOX_INTERFERENCE, // the psandbox is interferenced and needs future concern
+  BOX_PREEMPTED,// psandbox is a noisy neighbor and being preempted by the victim
+  BOX_COMPENSATED, // psandbox is victim and is penalizing others
+  BOX_PENDING_PENALTY // the penalty is pending
 };
 
 enum enum_condition {
   COND_LARGE, COND_SMALL, COND_LARGE_OR_EQUAL, COND_SMALL_OR_EQUAL
 };
 
-enum enum_queue_state {
+enum enum_activity_state {
   QUEUE_NULL,QUEUE_ENTER,QUEUE_SLEEP,QUEUE_AWAKE,QUEUE_EXIT,SHOULD_ENTER
 };
 
@@ -62,16 +65,13 @@ typedef struct sandboxEvent {
   int key_size;
 } BoxEvent;
 
-//typedef struct rule {
-//  int psandbox_type;
-//
-//} Rule;
-
 typedef struct activity {
-  enum enum_queue_state queue_state;
-  struct timespec execution_start;
+  enum enum_activity_state activity_state;
   struct timespec defer_time;
   struct timespec delaying_start;
+  struct timespec execution_time;
+  struct timespec execution_start;
+  uint activity_count;
   int owned_mutex; //TODO: use a slab to store each element and get one from the pool when you need to use it.
   int is_preempted;
   int queue_event;
@@ -82,13 +82,14 @@ typedef struct pSandbox {
   long bid;    // sandbox id used by syscalls
   enum enum_psandbox_state state;
   Activity *activity;
-  float delay_ratio;
+  double activity_threshold; // the maximum ratio of activity that are allowed to break the threshold
+  double interference_threshold; // the interference that allowed for each psandbox
+  int finished_activity;
+  int bad_activity;
+  int is_interference;
+  int compensation_ticket;
   struct pSandbox *noisy_neighbor;
   struct pSandbox *victim;
-  int counts[1000];
-  int _count;
-  int small_counts[10];
-  int sandbox_flag;
 } PSandbox;
 
 typedef struct condition {
@@ -103,11 +104,11 @@ typedef struct condition {
 PSandbox *create_psandbox();
 
 /// @brief release a performance sandbox
-/// @param pSandbox The performance sandbox to release.
+/// @param p_sandbox The performance sandbox to release.
 /// @return On success 1 is return
-int release_psandbox(PSandbox *pSandbox);
+int release_psandbox(PSandbox *p_sandbox);
 
-//int add_rule(PSandbox *p_sandbox, )
+int add_rules(int total_types, double* defer_rule);
 
 /// @brief Update an event to the performance p_sandbox
 /// @param event The event to notify the performance p_sandbox.
@@ -115,9 +116,9 @@ int release_psandbox(PSandbox *pSandbox);
 /// @return On success 1 is returned.
 int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox);
 
-void active_psandbox(PSandbox *pSandbox);
-void freeze_psandbox(PSandbox *pSandbox);
-struct pSandbox *get_psandbox();
+void active_psandbox(PSandbox *p_sandbox);
+void freeze_psandbox(PSandbox *p_sandbox);
+PSandbox *get_psandbox();
 
 /// @brief Update the queue condition to enter the queue
 /// @param key The key of the queue
@@ -126,14 +127,12 @@ struct pSandbox *get_psandbox();
 /// The function must be called right after the try queue update
 int psandbox_update_condition(int *keys, Condition cond);
 
-/// @brief Find the sandbox that need this resource most to run first
-/// @param sandbox that needs to be checked
-/// @return On interference 1 is returned.
-int psandbox_schedule();
 
 int track_mutex(struct sandboxEvent *event, PSandbox *p_sandbox);
 
-    void print_all();
+int track_time(struct sandboxEvent *event, PSandbox *p_sandbox);
+void print_all();
+
 #ifdef __cplusplus
 }
 #endif
