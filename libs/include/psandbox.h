@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 
-#define COMPENSATION_TICKET_NUMBER	100L
+#define COMPENSATION_TICKET_NUMBER	10000L
 #define PROBING_NUMBER 100
 
 enum enum_event_type {
@@ -55,7 +55,7 @@ enum enum_condition {
 };
 
 enum enum_activity_state {
-  QUEUE_NULL,QUEUE_ENTER,QUEUE_SLEEP,QUEUE_AWAKE,QUEUE_EXIT,SHOULD_ENTER
+  QUEUE_WAITING,QUEUE_ENTER,QUEUE_EXIT,SHOULD_ENTER
 };
 
 
@@ -90,6 +90,9 @@ typedef struct pSandbox {
   int compensation_ticket;
   struct pSandbox *noisy_neighbor;
   struct pSandbox *victim;
+
+  //debugging
+  int total_activity;
 } PSandbox;
 
 typedef struct condition {
