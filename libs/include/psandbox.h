@@ -23,7 +23,7 @@ extern "C" {
 #endif
 
 
-#define COMPENSATION_TICKET_NUMBER	10000L
+#define COMPENSATION_TICKET_NUMBER	1000L
 #define PROBING_NUMBER 100
 
 enum enum_event_type {
@@ -44,7 +44,6 @@ enum enum_psandbox_state {
   BOX_ACTIVE, // psandbox starts to handle an activity
   BOX_FREEZE, // psandbox finishs an activity
   BOX_START, // create a psandbox
-  BOX_INTERFERENCE, // the psandbox is interferenced and needs future concern
   BOX_PREEMPTED,// psandbox is a noisy neighbor and being preempted by the victim
   BOX_COMPENSATED, // psandbox is victim and is penalizing others
   BOX_PENDING_PENALTY // the penalty is pending
@@ -71,7 +70,7 @@ typedef struct activity {
   struct timespec delaying_start;
   struct timespec execution_time;
   struct timespec execution_start;
-  uint activity_count;
+  uint competitors;
   int owned_mutex; //TODO: use a slab to store each element and get one from the pool when you need to use it.
   int is_preempted;
   int queue_event;
@@ -82,11 +81,11 @@ typedef struct pSandbox {
   long bid;    // sandbox id used by syscalls
   enum enum_psandbox_state state;
   Activity *activity;
-  double activity_threshold; // the maximum ratio of activity that are allowed to break the threshold
-  double interference_threshold; // the interference that allowed for each psandbox
-  int finished_activity;
-  int bad_activity;
-  int is_interference;
+  double tail_threshold; // the maximum ratio of activity that are allowed to break the threshold
+  double max_defer; // the interference that allowed for each psandbox
+  int finished_activities;
+  int bad_activities;
+  int is_promoting; // the psandbox is interferenced and needs future concern
   int compensation_ticket;
   struct pSandbox *noisy_neighbor;
   struct pSandbox *victim;
