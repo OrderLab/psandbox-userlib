@@ -97,14 +97,14 @@ int mysql_select(int id) {
 void row_search_mysql(int id, PSandbox* psandbox) {
   BoxEvent event;
 
-  event.event_type = MUTEX_REQUIRE;
+  event.event_type = PREPARE;
   event.key = &mutex;
   update_psandbox(&event, psandbox);
 
   pthread_mutex_lock(&mutex);
 //  printf("call row_search_mysql tid = %d, id = %d\n", syscall(SYS_gettid),id);
 
-  event.event_type = MUTEX_GET;
+  event.event_type = ENTER;
   event.key = &mutex;
   update_psandbox(&event, psandbox);
 
@@ -116,7 +116,7 @@ void row_search_mysql(int id, PSandbox* psandbox) {
 
   pthread_mutex_unlock(&mutex);
 
-  event.event_type = MUTEX_RELEASE;
+  event.event_type = EXIT;
   event.key = &mutex;
   update_psandbox(&event, psandbox);
 }
