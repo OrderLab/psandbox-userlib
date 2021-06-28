@@ -9,10 +9,14 @@
 //      Licensed under the Apache License, Version 2.0 (the "License");
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <pthread.h>
+#include <locale>
+#include <fcntl.h>
+#include <string.h>
 #include "../libs/include/psandbox.h"
 
-#define NUM_THREADS  3
+#define NUM_THREADS  1
 # define os_atomic_increment(ptr, amount) \
 	__sync_add_and_fetch(ptr, amount)
 
@@ -34,109 +38,23 @@ int main() {
   return mysqld_main();
 }
 
-
-void
-os_thread_sleep(
-/*============*/
-    int	tm)	/*!< in: time in microseconds */
-{
-  struct timeval t;
-
-  t.tv_sec = tm / 1000000;
-  t.tv_usec = tm % 1000000;
-
-  select(0, NULL, NULL, NULL, &t);
-}
-
-void srv_conc_enter_innodb(){
-  struct sandboxEvent event;
-  PSandbox *psandbox = get_psandbox();
-  // FIXME handle pbox pointer can be NULL
-
-  event.event_type = PREPARE_QUEUE;
-  event.key = &n_active;
-  event.key_size = srv_thread_concurrency;
-  update_psandbox(&event, psandbox);
-
-  Condition cond;
-  cond.value = 0;
-  cond.compare = COND_LARGE;
-  psandbox_update_condition(&n_active, cond);
-
-  pthread_mutex_lock(&mutex);
-
-  for (;;) {
-    int	sleep_in_us;
-
-    if (n_active < srv_thread_concurrency) {
-      int active = os_atomic_increment(
-          &n_active, 1);
-      //printf("try to enter queue (inc)> %d\n", n_active);
-      if (active <= srv_thread_concurrency) {
-        //printf("entered queue yeah > %d\n", n_active);
-        event.event_type = ENTER_QUEUE;
-        event.key = &n_active;
-        event.key_size = srv_thread_concurrency;
-        update_psandbox(&event, psandbox);
-
-        event.event_type = UPDATE_QUEUE_CONDITION;
-        event.key = &n_active;
-        event.key_size = srv_thread_concurrency;
-        update_psandbox(&event, psandbox);
-        pthread_mutex_unlock(&mutex);
-
-        return;
-      }
-      (void) os_atomic_decrement(
-          &n_active, 1);
-      //printf("!!!! not entered queue oh no (dec)> %d\n", n_active);
-    }
-
-    // TODO why have a retry event??
-
-    sleep_in_us = srv_thread_sleep_delay;
-    os_thread_sleep(sleep_in_us);
-    event.event_type = RETRY_QUEUE;
-    event.key = &n_active;
-    event.key_size = srv_thread_concurrency;
-    update_psandbox(&event, psandbox);
-  }
-
-}
-
 void* do_handle_one_connection(void* arg) {
-  BoxEvent event;
   int j = *(int *)arg;
-  PSandbox* psandbox = create_psandbox();
-
-  for(int i = 0; i < 1; i++) {
-    active_psandbox(psandbox);
-    srv_conc_enter_innodb();
-
-    if(j > 0) {
-      int sleep_in_us = 1000000 * 5;
-      os_thread_sleep(sleep_in_us);
-    } else {
-      int sleep_in_us = 1000000 * 1;
-      os_thread_sleep(sleep_in_us);
-    }
-
-    (void) os_atomic_decrement(&n_active, 1);
-
-    event.event_type = UPDATE_QUEUE_CONDITION;
-    event.key = &n_active;
-    event.key_size = srv_thread_concurrency;
-    update_psandbox(&event, psandbox);
-
-    event.event_type = EXIT_QUEUE;
-    event.key = &n_active;
-    event.key_size = srv_thread_concurrency;
-    update_psandbox(&event, psandbox);
-
-    freeze_psandbox(psandbox);
+  char seq[50];
+  char buffer[30];
+  sprintf(seq, "%d", j);
+//  char *file_name = strcat(seq,".testfile.txt");
+//  printf("the file name is %s\n",file_name);
+//  int fd = open(file_name, O_WRONLY | O_APPEND);
+//  write(fd,"my name is yigonghu!\n",20);
+  clock_t start,end;
+  start = clock();
+  for(int i = 0; i < 100000; i++) {
+//    read(fd,buffer,30);
+      malloc(1024);
   }
-
-  release_psandbox(psandbox);
+  end = clock();
+  printf("time =%fs\n",(double)(end-start)/CLOCKS_PER_SEC );
   return 0;
 }
 

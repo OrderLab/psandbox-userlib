@@ -12,7 +12,7 @@
 #include <pthread.h>
 #include "../libs/include/psandbox.h"
 
-#define NUM_THREADS  3
+#define NUM_THREADS  1
 # define os_atomic_increment(ptr, amount) \
 	__sync_add_and_fetch(ptr, amount)
 
@@ -51,7 +51,7 @@ void srv_conc_enter_innodb(){
   struct sandboxEvent event;
   PSandbox *psandbox = get_psandbox();
 
-  event.event_type = PREPARE_QUEUE;
+  event.event_type = PREPARE;
   event.key = &n_active;
   event.key_size = srv_thread_concurrency;
   update_psandbox(&event, psandbox);
@@ -71,17 +71,7 @@ void srv_conc_enter_innodb(){
       int active = os_atomic_increment(
           &n_active, 1);
       if (active <= srv_thread_concurrency) {
-        event.event_type = ENTER_QUEUE;
-        event.key = &n_active;
-        event.key_size = srv_thread_concurrency;
-        update_psandbox(&event, psandbox);
-
-        event.event_type = UPDATE_QUEUE_CONDITION;
-        event.key = &n_active;
-        event.key_size = srv_thread_concurrency;
-        update_psandbox(&event, psandbox);
         pthread_mutex_unlock(&mutex);
-
         return;
       }
       (void) os_atomic_decrement(
@@ -90,17 +80,11 @@ void srv_conc_enter_innodb(){
 
     sleep_in_us = srv_thread_sleep_delay;
     os_thread_sleep(sleep_in_us);
-
-    event.event_type = RETRY_QUEUE;
-    event.key = &n_active;
-    event.key_size = srv_thread_concurrency;
-    update_psandbox(&event, psandbox);
   }
 
 }
 
 void* do_handle_one_connection(void* arg) {
-  BoxEvent event;
   int j = *(int *)arg;
   PSandbox* psandbox = create_psandbox();
 
@@ -117,16 +101,6 @@ void* do_handle_one_connection(void* arg) {
     }
 
     (void) os_atomic_decrement(&n_active, 1);
-    event.event_type = UPDATE_QUEUE_CONDITION;
-    event.key = &n_active;
-    event.key_size = srv_thread_concurrency;
-    update_psandbox(&event, psandbox);
-
-    event.event_type = EXIT_QUEUE;
-    event.key = &n_active;
-    event.key_size = srv_thread_concurrency;
-    update_psandbox(&event, psandbox);
-
     freeze_psandbox(psandbox);
   }
 

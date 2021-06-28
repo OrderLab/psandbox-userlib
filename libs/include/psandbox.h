@@ -22,21 +22,17 @@
 extern "C" {
 #endif
 
+#define HIGHEST_PRIORITY 2
+#define MID_PRIORITY 1
+#define LOW_PRIORITY 0
 
 #define COMPENSATION_TICKET_NUMBER	1000L
 #define PROBING_NUMBER 100
 
 enum enum_event_type {
-  PREPARE_QUEUE,
-  RETRY_QUEUE,
-  ENTER_QUEUE,
-  EXIT_QUEUE,
-  SLEEP_BEGIN,
-  SLEEP_END,
-  UPDATE_QUEUE_CONDITION,
-  MUTEX_REQUIRE,
-  MUTEX_GET,
-  MUTEX_RELEASE
+  PREPARE,
+  ENTER,
+  EXIT,
 };
 
 //Add comment for each enum type to describe the semantic and the constrains of the action for that state
@@ -44,7 +40,7 @@ enum enum_psandbox_state {
   BOX_ACTIVE, // psandbox starts to handle an activity
   BOX_FREEZE, // psandbox finishs an activity
   BOX_START, // create a psandbox
-  BOX_PREEMPTED,// psandbox is a noisy neighbor and being preempted by the victim
+  BOX_PREEMPTED, // psandbox is a noisy neighbor and being preempted by the victim
   BOX_COMPENSATED, // psandbox is victim and is penalizing others
   BOX_PENDING_PENALTY // the penalty is pending
 };
@@ -54,7 +50,7 @@ enum enum_condition {
 };
 
 enum enum_activity_state {
-  QUEUE_WAITING,QUEUE_ENTER,QUEUE_EXIT,SHOULD_ENTER
+  QUEUE_WAITING,QUEUE_ENTER,QUEUE_EXIT,QUEUE_PREEMPTED,QUEUE_PROMOTED
 };
 
 
@@ -129,6 +125,7 @@ PSandbox *get_psandbox();
 /// The function must be called right after the try queue update
 int psandbox_update_condition(int *keys, Condition cond);
 
+int psandbox_manager_init();
 
 int track_mutex(struct sandboxEvent *event, PSandbox *p_sandbox);
 
