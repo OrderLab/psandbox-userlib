@@ -11,18 +11,13 @@
 
 #include <stdio.h>
 #include <pthread.h>
+#include "syscall.h"
 #include "../libs/include/psandbox.h"
 
-#define NUM_THREADS  2
+#define NUM_THREADS 2
 #define LOOP_BASE 5
-# define os_atomic_increment(ptr, amount) \
-	__sync_add_and_fetch(ptr, amount)
 
-# define os_atomic_decrement(ptr, amount) \
-	__sync_sub_and_fetch(ptr, amount)
-
-pthread_mutex_t mutex;
-pthread_mutex_t mutex1;
+pthread_mutex_t mutex=PTHREAD_MUTEX_INITIALIZER;
 
 enum enum_sql_command {
   SQLCOM_SELECT, SQLCOM_CREATE_TABLE, SQLCOM_CREATE_INDEX, SQLCOM_ALTER_TABLE,
@@ -38,9 +33,10 @@ void srv_conc_enter_innodb();
 void os_thread_sleep(int tm);
 int mysql_execute_command(enum_sql_command sql_command, int id);
 int mysql_select(int id);
-void row_search_mysql(int id, PSandbox* sandbox);
+void row_search_mysql(int id);
 
 int main() {
+  psandbox_manager_init();
   return mysqld_main();
 }
 
@@ -71,23 +67,22 @@ int mysql_execute_command(enum_sql_command sql_command, int id) {
 int mysql_select(int id) {
   int loop = LOOP_BASE;
   int i;
-  PSandbox *sandbox = get_psandbox();
-  if (id == 0 ) {
-    os_thread_sleep(1000);
-  }
+//  PSandbox *sandbox = get_psandbox();
+//  if (id == 0 ) {
+//    os_thread_sleep(1000);
+//  }
   for (i = 0; i < loop; i++) {
-//      printf("call row_search_mysql %d\n",syscall(SYS_gettid));
-      row_search_mysql(id,sandbox);
+      row_search_mysql(id);
   }
 }
 
-void row_search_mysql(int id, PSandbox* psandbox) {
+void row_search_mysql(int id) {
   pthread_mutex_lock(&mutex);
-//  printf("call row_search_mysql tid = %d, id = %d\n", syscall(SYS_gettid),id);
-  if(id == 0) {
-    os_thread_sleep(2000000);
+//  printf("get the lock for %d\n",syscall(SYS_gettid));
+  if (id == 0) {
+    os_thread_sleep(1000000);
   } else {
-    os_thread_sleep(10000);
+    os_thread_sleep(1000);
   }
   pthread_mutex_unlock(&mutex);
 }
@@ -111,8 +106,8 @@ void create_new_thread(){
   pthread_t threads[NUM_THREADS];
   int arg[NUM_THREADS];
   int i;
-  pthread_mutex_init(&mutex, NULL);
-  pthread_mutex_init(&mutex1, NULL);
+//  pthread_mutex_init(&mutex, NULL);
+
   for(i = 0; i<NUM_THREADS;i++) {
     arg[i] = i;
   }
@@ -124,8 +119,7 @@ void create_new_thread(){
   {
     pthread_join (threads[i], NULL);
   }
-  pthread_mutex_destroy (&mutex);
-  pthread_mutex_destroy (&mutex1);
+//  pthread_mutex_destroy (&mutex);
 }
 
 int mysqld_main() {

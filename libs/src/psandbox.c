@@ -27,6 +27,9 @@
 #define SYS_PENALIZE_PSANDBOX 440
 #define SYS_COMPENSATE_PSANDBOX 441
 #define SYS_START_MANAGER 442
+#define SYS_ACTIVE_PSANDBOX 443
+#define SYS_FREEZE_PSANDBOX 444
+#define SYS_UPDATE_EVENT 445
 
 #define NSEC_PER_USEC    1000L
 #define NSEC_PER_SEC 1000000000L
@@ -90,7 +93,6 @@ static inline void updateDefertime(PSandbox *p_sandbox) {
   p_sandbox->activity->defer_time = timeAdd(defer_tm, p_sandbox->activity->defer_time);
 }
 
-
 static inline long time2ns(Time t1) {
   return t1.tv_sec * 1000000000L + t1.tv_nsec;
 }
@@ -123,7 +125,7 @@ PSandbox *create_psandbox() {
   p_sandbox->tail_threshold = 0.2;
   p_sandbox->bad_activities = 0;
   p_sandbox->finished_activities = 0;
-  p_sandbox->is_promoting = LOW_PRIORITY;
+  p_sandbox->action_level = LOW_PRIORITY;
   p_sandbox->compensation_ticket = 0;
   p_sandbox->total_activity = 0;
 
@@ -132,6 +134,7 @@ PSandbox *create_psandbox() {
   }
 
   *key = (int) (sandbox_id);
+
   pthread_mutex_lock(&stats_lock);
   g_hash_table_insert(psandbox_map, key, p_sandbox);
   pthread_mutex_unlock(&stats_lock);
@@ -223,110 +226,111 @@ int update_psandbox(BoxEvent *event, PSandbox *p_sandbox) {
   if (p_sandbox->state == BOX_FREEZE)
     return 0;
 
+
   switch (event_type) {
     case PREPARE:{
-      pthread_mutex_lock(&stats_lock);
-      clock_gettime(CLOCK_REALTIME, &p_sandbox->activity->delaying_start);
-      p_sandbox->activity->activity_state = QUEUE_WAITING;
+//      pthread_mutex_lock(&stats_lock);
+//      clock_gettime(CLOCK_REALTIME, &p_sandbox->activity->delaying_start);
+//      p_sandbox->activity->activity_state = QUEUE_WAITING;
 
-      competitors = g_hash_table_lookup(competitors_map, GINT_TO_POINTER(key));
-      competitors = g_list_append(competitors, p_sandbox);
-      g_hash_table_insert(competitors_map, GINT_TO_POINTER(key), competitors);
+//      competitors = g_hash_table_lookup(competitors_map, GINT_TO_POINTER(key));
+//      competitors = g_list_append(competitors, p_sandbox);
+//      g_hash_table_insert(competitors_map, GINT_TO_POINTER(key), competitors);
 //      printf("PREPARE the size is %d, the key is %d, %d\n",g_list_length(competitors), (*(int *)event->key),p_sandbox->bid);
-      if (p_sandbox->is_promoting == HIGHEST_PRIORITY) {
-        interfered_psandboxs = g_hash_table_lookup(interfered_competitors, GINT_TO_POINTER(key));
-        interfered_psandboxs = g_list_append(interfered_psandboxs, p_sandbox);
-        g_hash_table_insert(interfered_competitors, GINT_TO_POINTER(key), interfered_psandboxs);
-      }
-
-      pthread_mutex_unlock(&stats_lock);
+//      if (p_sandbox->action_level == HIGHEST_PRIORITY) {
+//        interfered_psandboxs = g_hash_table_lookup(interfered_competitors, GINT_TO_POINTER(key));
+//        interfered_psandboxs = g_list_append(interfered_psandboxs, p_sandbox);
+//        g_hash_table_insert(interfered_competitors, GINT_TO_POINTER(key), interfered_psandboxs);
+//      }
+      syscall(SYS_UPDATE_EVENT,event,p_sandbox->bid);
+//      pthread_mutex_unlock(&stats_lock);
       break;
     }
     case ENTER:{
-      GList *iterator;
-
+//      GList *iterator;
+      syscall(SYS_UPDATE_EVENT,event,p_sandbox->bid);
 //      printf("ENTER get the mutex psandbox %d,the key is %d\n",p_sandbox->bid,(*(int *)event->key));
-      pthread_mutex_lock(&stats_lock);
-      competitors = g_hash_table_lookup(competitors_map, GINT_TO_POINTER(key));
-      competitors = g_list_remove(competitors, p_sandbox);
-      g_hash_table_insert(competitors_map, GINT_TO_POINTER(key), competitors);
-      p_sandbox->activity->activity_state = QUEUE_ENTER;
-
-      holders = g_hash_table_lookup(holders_map, GINT_TO_POINTER(key));
-      holders = g_list_append(holders, p_sandbox);
-      g_hash_table_insert(holders_map, GINT_TO_POINTER(key), holders);
-
-//      printf("ENTER the size is %d,the key is %d, %d\n",g_list_length(competitors),(*(int *)event->key),p_sandbox->bid);
-      if (p_sandbox->is_promoting == HIGHEST_PRIORITY) {
-        interfered_psandboxs = g_hash_table_lookup(interfered_competitors, GINT_TO_POINTER(key));
-        interfered_psandboxs = g_list_remove(interfered_psandboxs, p_sandbox);
-        g_hash_table_insert(interfered_competitors, GINT_TO_POINTER(key), interfered_psandboxs);
-
-        for (iterator = competitors; iterator; iterator = iterator->next) {
-          PSandbox *psandbox = (PSandbox *) iterator->data;
-//          printf("find psandbox %d, activity state %d, promoting %d, state %d\n",psandbox->bid,psandbox->activity->activity_state,psandbox->is_promoting,psandbox->state);
-          if (psandbox == NULL || p_sandbox == psandbox || psandbox->activity->activity_state != QUEUE_WAITING
-              || psandbox->is_promoting != LOW_PRIORITY || psandbox->state != BOX_PREEMPTED)
-            continue;
-
-          psandbox->state = BOX_ACTIVE;
-          syscall(SYS_WAKEUP_PSANDBOX, psandbox->bid);
-        }
-      }
-      updateDefertime(p_sandbox);
-      pthread_mutex_unlock(&stats_lock);
+//      pthread_mutex_lock(&stats_lock);
+//      competitors = g_hash_table_lookup(competitors_map, GINT_TO_POINTER(key));
+//      competitors = g_list_remove(competitors, p_sandbox);
+//      g_hash_table_insert(competitors_map, GINT_TO_POINTER(key), competitors);
+//      p_sandbox->activity->activity_state = QUEUE_ENTER;
+//
+//      holders = g_hash_table_lookup(holders_map, GINT_TO_POINTER(key));
+//      holders = g_list_append(holders, p_sandbox);
+//      g_hash_table_insert(holders_map, GINT_TO_POINTER(key), holders);
+//
+////      printf("ENTER the size is %d,the key is %d, %d\n",g_list_length(competitors),(*(int *)event->key),p_sandbox->bid);
+//      if (p_sandbox->action_level == HIGHEST_PRIORITY) {
+//        interfered_psandboxs = g_hash_table_lookup(interfered_competitors, GINT_TO_POINTER(key));
+//        interfered_psandboxs = g_list_remove(interfered_psandboxs, p_sandbox);
+//        g_hash_table_insert(interfered_competitors, GINT_TO_POINTER(key), interfered_psandboxs);
+//
+//        for (iterator = competitors; iterator; iterator = iterator->next) {
+//          PSandbox *psandbox = (PSandbox *) iterator->data;
+////          printf("find psandbox %d, activity state %d, promoting %d, state %d\n",psandbox->bid,psandbox->activity->activity_state,psandbox->action_level,psandbox->state);
+//          if (psandbox == NULL || p_sandbox == psandbox || psandbox->activity->activity_state != QUEUE_WAITING
+//              || psandbox->action_level != LOW_PRIORITY || psandbox->state != BOX_PREEMPTED)
+//            continue;
+//
+//          psandbox->state = BOX_ACTIVE;
+//          syscall(SYS_WAKEUP_PSANDBOX, psandbox->bid);
+//        }
+//      }
+//      updateDefertime(p_sandbox);
+//      pthread_mutex_unlock(&stats_lock);
       break;
     }
     case EXIT:
     {
-      pthread_mutex_lock(&stats_lock);
-      GList *iterator = NULL;
-      p_sandbox->activity->activity_state = QUEUE_EXIT;
+      syscall(SYS_UPDATE_EVENT,event,p_sandbox->bid);
+//      pthread_mutex_lock(&stats_lock);
+//      GList *iterator = NULL;
+//      p_sandbox->activity->activity_state = QUEUE_EXIT;
+//
+//      competitors = g_hash_table_lookup(competitors_map, GINT_TO_POINTER(key));
+//      interfered_psandboxs = g_hash_table_lookup(interfered_competitors, GINT_TO_POINTER(key));
+//
+//      holders = g_hash_table_lookup(holders_map, GINT_TO_POINTER(key));
+//      holders = g_list_remove(holders, p_sandbox);
+//      g_hash_table_insert(holders_map, GINT_TO_POINTER(key), holders);
+//      if (p_sandbox->action_level == LOW_PRIORITY && competitors && interfered_psandboxs) {
+//        for (iterator = competitors; iterator; iterator = iterator->next) {
+//          PSandbox *competitor = (PSandbox *) iterator->data;
+//          if (competitor == NULL || p_sandbox == competitor || competitor->activity->activity_state != QUEUE_WAITING
+//              || competitor->action_level != LOW_PRIORITY)
+//            continue;
+//
+//          competitor->state = BOX_PREEMPTED;
+//          syscall(SYS_PENALIZE_PSANDBOX, competitor->bid, 1000);
+//        }
+//
+//        interfered_psandboxs = g_hash_table_lookup(interfered_competitors, GINT_TO_POINTER(key));
+//
+//        for (iterator = interfered_psandboxs; iterator; iterator = iterator->next) {
+//          PSandbox *victim = (PSandbox *) iterator->data;
+//
+//          if (victim == NULL || victim->activity->activity_state != QUEUE_WAITING)
+//            continue;
+//
+//          interfered_psandboxs = g_list_remove(interfered_psandboxs, victim);
+//          g_hash_table_insert(interfered_competitors, GINT_TO_POINTER(key), interfered_psandboxs);
+////        printf("psandbox %d wakeup %d\n",p_sandbox->bid, victim->bid);
+//          syscall(SYS_WAKEUP_PSANDBOX, victim->bid);
+//        }
+//      }
 
-      competitors = g_hash_table_lookup(competitors_map, GINT_TO_POINTER(key));
-      interfered_psandboxs = g_hash_table_lookup(interfered_competitors, GINT_TO_POINTER(key));
-
-      holders = g_hash_table_lookup(holders_map, GINT_TO_POINTER(key));
-      holders = g_list_remove(holders, p_sandbox);
-      g_hash_table_insert(holders_map, GINT_TO_POINTER(key), holders);
-
-      if (p_sandbox->is_promoting == LOW_PRIORITY && competitors && interfered_psandboxs) {
-        for (iterator = competitors; iterator; iterator = iterator->next) {
-          PSandbox *competitor = (PSandbox *) iterator->data;
-          if (competitor == NULL || p_sandbox == competitor || competitor->activity->activity_state != QUEUE_WAITING
-              || competitor->is_promoting != LOW_PRIORITY)
-            continue;
-
-          competitor->state = BOX_PREEMPTED;
-          syscall(SYS_PENALIZE_PSANDBOX, competitor->bid, 1000);
-        }
-
-        interfered_psandboxs = g_hash_table_lookup(interfered_competitors, GINT_TO_POINTER(key));
-
-        for (iterator = interfered_psandboxs; iterator; iterator = iterator->next) {
-          PSandbox *victim = (PSandbox *) iterator->data;
-
-          if (victim == NULL || victim->activity->activity_state != QUEUE_WAITING)
-            continue;
-
-          interfered_psandboxs = g_list_remove(interfered_psandboxs, victim);
-          g_hash_table_insert(interfered_competitors, GINT_TO_POINTER(key), interfered_psandboxs);
-//        printf("psandbox %d wakeup %d\n",p_sandbox->bid, victim->bid);
-          syscall(SYS_WAKEUP_PSANDBOX, victim->bid);
-        }
-      }
-
-      if (is_interfered(p_sandbox, event, holders)) {
-        PSandbox* noisy_neighbor;
-        noisy_neighbor = find_noisyNeighbor(p_sandbox, holders);
-
-        if (noisy_neighbor) {
-          //Give penalty to the noisy neighbor
-          printf("1.thread %lu sleep thread %lu\n", p_sandbox->bid, noisy_neighbor->bid);
-          penalize_competitor(noisy_neighbor,p_sandbox,event);
-        }
-      }
-      pthread_mutex_unlock(&stats_lock);
+//      if (is_interfered(p_sandbox, event, holders)) {
+//        PSandbox* noisy_neighbor;
+//        noisy_neighbor = find_noisyNeighbor(p_sandbox, holders);
+//
+//        if (noisy_neighbor) {
+//          //Give penalty to the noisy neighbor
+//          printf("1.thread %lu sleep thread %lu\n", p_sandbox->bid, noisy_neighbor->bid);
+//          penalize_competitor(noisy_neighbor,p_sandbox,event);
+//        }
+//      }
+//      pthread_mutex_unlock(&stats_lock);
       break;
     }
 //    case MUTEX_RELEASE: {
@@ -371,37 +375,11 @@ int update_psandbox(BoxEvent *event, PSandbox *p_sandbox) {
 //    }
 
 
-    default:break;
+
   }
   return success;
 }
 
-//int psandbox_update_condition(int *keys, Condition cond) {
-//  Condition *condition;
-//  pthread_mutex_lock(&stats_lock);
-//  if (condition_map.table_size == 0) {
-//    if (0 != hashmap_create(initial_size, &condition_map)) {
-//      pthread_mutex_unlock(&stats_lock);
-//      return -1;
-//    }
-//  }
-//  condition = hashmap_get(&condition_map, keys, DIRECT);
-//  if (!condition) {
-//    condition = malloc(sizeof(Condition));
-//    condition->compare = cond.compare;
-//    condition->value = cond.value;
-//    if (hashmap_put(&condition_map, keys, condition, INDIRECT)) {
-//      printf("Error: fail to add condition list\n");
-//      pthread_mutex_unlock(&stats_lock);
-//      return -1;
-//    }
-//  } else {
-//    condition->compare = cond.compare;
-//    condition->value = cond.value;
-//  }
-//  pthread_mutex_unlock(&stats_lock);
-//  return 0;
-//}
 
 //time_t get_penalty(PSandbox *psandbox, GList *competitors) {
 //  GList *iterator = NULL;
@@ -449,7 +427,7 @@ int is_interfered(PSandbox *psandbox, BoxEvent *event, GList *competitors) {
   delayed_tm = timeDiff(psandbox->activity->delaying_start,current_time);
 
   if (time2ns(delayed_tm) > time2ns(timeDiff(delayed_tm, executing_tm)) *
-      psandbox->max_defer * (g_list_length(competitors) + *(int *) event->key)) {
+      psandbox->max_defer * g_list_length(competitors)) {
     return 1;
   }
   return 0;
@@ -469,36 +447,7 @@ PSandbox *find_noisyNeighbor(PSandbox *p_sandbox, GList *competitors) {
   }
   return 0;
 }
-//
-//int wakeup_competitor(GList *competitors, PSandbox *sandbox) {
-//  GList *iterator;
-//  time_t executing_tm, delayed_tm;
-//  struct timespec current_time;
-//
-//  for (iterator = competitors; iterator; iterator = iterator->next) {
-//    PSandbox *competitor_sandbox = iterator->data;
-//
-//    // Don't wakeup itself
-//    if (sandbox == competitor_sandbox || competitor_sandbox->activity->activity_state != QUEUE_SLEEP)
-//      continue;
-//
-//    clock_gettime(CLOCK_REALTIME, &current_time);
-//    executing_tm = current_time.tv_sec * NSEC_PER_SEC + current_time.tv_nsec -
-//        competitor_sandbox->activity->execution_time.tv_sec * NSEC_PER_SEC
-//        - competitor_sandbox->activity->execution_time.tv_nsec;
-//    delayed_tm = current_time.tv_sec * NSEC_PER_SEC + current_time.tv_nsec -
-//        competitor_sandbox->activity->delaying_start.tv_sec * NSEC_PER_SEC
-//        - competitor_sandbox->activity->delaying_start.tv_nsec;
-//
-//    if ((float) delayed_tm > (float) (executing_tm - delayed_tm) *
-//        competitor_sandbox->max_defer * (float) g_list_length(competitors)) {
-//      syscall(SYS_WAKEUP_PSANDBOX, competitor_sandbox->bid);
-//      break;
-//    }
-//  }
-//  return 0;
-//}
-//
+
 int penalize_competitor(PSandbox *noisy_neighbor, PSandbox *victim, BoxEvent *event) {
   if (noisy_neighbor->activity->owned_mutex > 0) {
 //    printf("the number of owned mutex is %d, victim %d, noisy %d\n",noisy_neighbor->activity->owned_mutex,victim->bid,noisy_neighbor->bid);
@@ -527,10 +476,10 @@ void active_psandbox(PSandbox *p_sandbox) {
     return;
   }
 //  p_sandbox->total_activity++;
-
-  p_sandbox->state = BOX_ACTIVE;
-  clock_gettime(CLOCK_REALTIME, &p_sandbox->activity->execution_start);
-  p_sandbox->activity->competitors = g_hash_table_size(psandbox_map) - 1;
+  syscall(SYS_ACTIVE_PSANDBOX);
+//  p_sandbox->state = BOX_ACTIVE;
+//  clock_gettime(CLOCK_REALTIME, &p_sandbox->activity->execution_start);
+//  p_sandbox->activity->competitors = g_hash_table_size(psandbox_map) - 1;
 }
 
 void freeze_psandbox(PSandbox *p_sandbox) {
@@ -540,38 +489,37 @@ void freeze_psandbox(PSandbox *p_sandbox) {
     return;
   }
 
-  if (p_sandbox->compensation_ticket > 1) {
-    p_sandbox->compensation_ticket--;
-  } else {
-    p_sandbox->is_promoting = LOW_PRIORITY;
-  }
+//  if (p_sandbox->compensation_ticket > 1) {
+//    p_sandbox->compensation_ticket--;
+//  } else {
+//    p_sandbox->action_level = LOW_PRIORITY;
+//  }
 
-  p_sandbox->finished_activities++;
-  p_sandbox->state = BOX_FREEZE;
-  clock_gettime(CLOCK_REALTIME, &current_tm);
-  pthread_mutex_lock(&stats_lock);
-  p_sandbox->activity->execution_time =
-      timeDiff(p_sandbox->activity->defer_time, timeDiff(p_sandbox->activity->execution_start, current_tm));
-  pthread_mutex_unlock(&stats_lock);
+//  p_sandbox->finished_activities++;
+//  p_sandbox->state = BOX_FREEZE;
+//  clock_gettime(CLOCK_REALTIME, &current_tm);
+//  pthread_mutex_lock(&stats_lock);
+//  p_sandbox->activity->execution_time =
+//      timeDiff(p_sandbox->activity->defer_time, timeDiff(p_sandbox->activity->execution_start, current_tm));
+//  pthread_mutex_unlock(&stats_lock);
+  syscall(SYS_FREEZE_PSANDBOX);
+//  if(p_sandbox->activity->competitors == 0 )
+//    return;
+//
+//  if (time2ns(p_sandbox->activity->execution_time) * p_sandbox->max_defer * p_sandbox->activity->competitors
+//      < time2ns(p_sandbox->activity->defer_time)) {
+//    p_sandbox->bad_activities++;
+//    if (p_sandbox->action_level == LOW_PRIORITY)
+//      p_sandbox->action_level = MID_PRIORITY;
+//    if (p_sandbox->action_level != HIGHEST_PRIORITY && p_sandbox->finished_activities > PROBING_NUMBER && p_sandbox->bad_activities
+//        > (p_sandbox->tail_threshold * p_sandbox->finished_activities)) {
+//      p_sandbox->action_level = HIGHEST_PRIORITY;
+//      printf("give a ticket for %lu, bad activity %d, finish activity %d\n", p_sandbox->bid, p_sandbox->bad_activities, p_sandbox->finished_activities);
+//      p_sandbox->compensation_ticket = COMPENSATION_TICKET_NUMBER;
+//    }
+//  }
 
-  if(p_sandbox->activity->competitors == 0 )
-    return;
-
-  if (time2ns(p_sandbox->activity->execution_time) * p_sandbox->max_defer * p_sandbox->activity->competitors
-      < time2ns(p_sandbox->activity->defer_time)) {
-    p_sandbox->bad_activities++;
-    if (p_sandbox->is_promoting == LOW_PRIORITY)
-      p_sandbox->is_promoting = MID_PRIORITY;
-    if (p_sandbox->is_promoting != HIGHEST_PRIORITY && p_sandbox->finished_activities > PROBING_NUMBER && p_sandbox->bad_activities
-        > (p_sandbox->tail_threshold * p_sandbox->finished_activities)) {
-      p_sandbox->is_promoting = HIGHEST_PRIORITY;
-      printf("give a ticket for %lu, bad activity %d, finish activity %d\n", p_sandbox->bid, p_sandbox->bad_activities, p_sandbox->finished_activities);
-      p_sandbox->compensation_ticket = COMPENSATION_TICKET_NUMBER;
-    }
-  }
-
-
-  memset(p_sandbox->activity, 0, sizeof(Activity));
+//  memset(p_sandbox->activity, 0, sizeof(Activity));
 }
 
 //int track_mutex(BoxEvent *event, PSandbox *p_sandbox) {

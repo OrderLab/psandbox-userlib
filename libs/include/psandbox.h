@@ -56,8 +56,7 @@ enum enum_activity_state {
 
 typedef struct sandboxEvent {
   enum enum_event_type event_type;
-  void* key;
-  int key_size;
+  unsigned int key;
 } BoxEvent;
 
 typedef struct activity {
@@ -81,7 +80,7 @@ typedef struct pSandbox {
   double max_defer; // the interference that allowed for each psandbox
   int finished_activities;
   int bad_activities;
-  int is_promoting; // the psandbox is interferenced and needs future concern
+  int action_level; // the psandbox is interferenced and needs future concern
   int compensation_ticket;
   struct pSandbox *noisy_neighbor;
   struct pSandbox *victim;

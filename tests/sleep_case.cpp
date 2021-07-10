@@ -90,7 +90,7 @@ void log_write_up_to(ibool flush_to_disk) {
     PSandbox *sandbox = get_psandbox();
 
     event.event_type = PREPARE;
-    event.key = &n_pending_flushes;
+    event.key = (size_t)&n_pending_flushes;
     update_psandbox(&event, sandbox);
 
 
@@ -108,7 +108,7 @@ retry:
     }
 
     event.event_type = ENTER;
-    event.key = &n_pending_flushes;
+    event.key = (size_t)&n_pending_flushes;
     update_psandbox(&event, sandbox);
 
     n_pending_flushes++;
@@ -127,7 +127,7 @@ retry:
     pthread_mutex_unlock(&mutex);
 
     event.event_type = EXIT;
-    event.key = &n_pending_flushes;
+    event.key =(size_t) &n_pending_flushes;
     update_psandbox(&event, sandbox);
   }
 }
