@@ -215,12 +215,14 @@ void mount_psandbox_event(size_t event_key, PSandbox *p_sandbox) {
     psandbox_transfer_event_map = g_hash_table_new(g_int64_hash, g_int64_equal);
   }
 
-
   pthread_mutex_lock(&psandbox_transfer_event_lock);
   p_sandboxes = g_hash_table_lookup(psandbox_transfer_event_map, key);
-  g_list_append(p_sandboxes, p_sandbox);
+
   if (p_sandboxes == NULL) {
+    p_sandboxes = g_list_append(p_sandboxes, p_sandbox);
     g_hash_table_insert(psandbox_transfer_event_map, key, p_sandboxes);
+  } else {
+    g_list_append(p_sandboxes, p_sandbox);
   }
   pthread_mutex_unlock(&psandbox_transfer_event_lock);
 }
@@ -245,14 +247,13 @@ PSandbox *unmount_psandbox(size_t thread_self, size_t event_key) {
   // printf("222\n");
 
   if (p_sandbox == NULL) {
-    printf("didn't find the psandbox!!\n");
     (*key) = event_key;
     pthread_mutex_lock(&psandbox_transfer_event_lock);
     p_sandboxes = g_hash_table_lookup(psandbox_transfer_event_map, key);
     if (p_sandboxes) {
       tl = g_list_last(p_sandboxes);
       p_sandbox = (PSandbox *) tl->data;
-      p_sandboxes = g_list_remove(p_sandboxes, tl);
+      p_sandboxes = g_list_remove(p_sandboxes, p_sandbox);
       if (p_sandboxes == NULL) {
         g_hash_table_remove(psandbox_transfer_event_map, key);
       }
