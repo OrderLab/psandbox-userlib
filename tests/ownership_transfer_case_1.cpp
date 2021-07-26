@@ -28,7 +28,7 @@ pthread_mutex_t mutex;
 int n_active = 0;
 int srv_thread_sleep_delay	= 10000;
 
-#define NUM_TASKS  4
+#define NUM_TASKS  1
 int thread_pool_size = 3;
 
 int mysqld_main();
@@ -79,7 +79,7 @@ void* do_handle_one_task(void* arg) {
   printf("task %d  start\n", j);
 
   PSandbox *psandbox;
-  psandbox = unmount_psandbox(NULL, 111);
+  psandbox = bind_psandbox(j);
 
   if(j > 0) {
     int sleep_in_us = 1000000 * 2;
@@ -108,10 +108,10 @@ void handle_tasks() {
 
   for (i = 0; i < NUM_TASKS; i++) {
     PSandbox* psandbox = create_psandbox(); 
-    // and active the psandbox
+    //and active the psandbox
     find_available_thread();
     printf("found available thread for task %d\n", i);
-    mount_psandbox_event(111, psandbox);
+    unbind_psandbox(i, psandbox);
     pthread_create(&threads[i], NULL, do_handle_one_task, &arg[i]);
   }
   

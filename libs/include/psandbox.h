@@ -128,9 +128,12 @@ PSandbox *get_psandbox();
 ///   solution, another global struct, B's get pbox by the same event key?
 ///   unmount, iterate first global struct, if no, check the second for the 
 ///   same key
-void mount_psandbox_thread(size_t thread_next, PSandbox *p_sandbox); // TODO to remove
-void mount_psandbox_event(size_t event_key, PSandbox *p_sandbox);
-PSandbox *unmount_psandbox(size_t thread_self, size_t event_key);
+void unbind_psandbox(size_t addr, PSandbox *p_sandbox);
+PSandbox *bind_psandbox(size_t addr);
+
+// unbind and bind
+// task is 1-1 descripted to a struct which is a unique address in memory 
+// 
 
 /// @brief Update the queue condition to enter the queue
 /// @param key The key of the queue

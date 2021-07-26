@@ -30,6 +30,8 @@
 #define SYS_ACTIVE_PSANDBOX 443
 #define SYS_FREEZE_PSANDBOX 444
 #define SYS_UPDATE_EVENT 445
+#define SYS_UNBIND_PSANDBOX 446
+#define SYS_BIND_PSANDBOX 447
 
 #define NSEC_PER_USEC    1000L
 #define NSEC_PER_SEC 1000000000L
@@ -40,15 +42,15 @@ GHashTable *competitors_map;
 GHashTable *interfered_competitors;
 GHashTable *holders_map;
 //GHashTable condition_map;
-GHashTable *psandbox_transfer_thread_map;
-GHashTable *psandbox_transfer_event_map;
+GHashTable *psandbox_transfer_map;
+// GHashTable *psandbox_transfer_event_map;
 double **rules;
 
 /* lock for updating the stats variables */
 pthread_mutex_t stats_lock = PTHREAD_MUTEX_INITIALIZER;
 /* lock for transfering psandbox ownership */
-pthread_mutex_t psandbox_transfer_thread_lock = PTHREAD_MUTEX_INITIALIZER;
-pthread_mutex_t psandbox_transfer_event_lock = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t psandbox_transfer_lock = PTHREAD_MUTEX_INITIALIZER;
+// pthread_mutex_t psandbox_transfer_event_lock = PTHREAD_MUTEX_INITIALIZER;
 
 /// @brief Check whether the current activity is interfered or not
 /// @param key The key of the queue
@@ -189,77 +191,83 @@ PSandbox *get_psandbox() {
   return psandbox;
 }
 
-void mount_psandbox_thread(size_t thread_next, PSandbox *p_sandbox) {
+void unbind_psandbox(size_t addr, PSandbox *p_sandbox) {
 
-  // syscall(SYS_MOUNT_PSANDBOX); // stop the psandbox?
+  printf("unbind psandbox %d\n", p_sandbox->bid);
 
+  syscall(SYS_UNBIND_PSANDBOX, addr); 
+  p_sandbox->bid = -1;
+  
   gint64 *key = g_new(gint64, 1);
-  (*key) = thread_next;
+  (*key) = addr;
 
-  if (psandbox_transfer_thread_map == NULL) {
-    psandbox_transfer_thread_map = g_hash_table_new(g_int64_hash, g_int64_equal);
+  if (psandbox_transfer_map == NULL) {
+    psandbox_transfer_map = g_hash_table_new(g_int64_hash, g_int64_equal);
   }
 
-  pthread_mutex_lock(&psandbox_transfer_thread_lock);
-  g_hash_table_insert(psandbox_transfer_thread_map, key, p_sandbox);
-  pthread_mutex_unlock(&psandbox_transfer_thread_lock);
+  pthread_mutex_lock(&psandbox_transfer_lock);
+  g_hash_table_insert(psandbox_transfer_map, key, p_sandbox);
+  pthread_mutex_unlock(&psandbox_transfer_lock);
+
 }
 
-void mount_psandbox_event(size_t event_key, PSandbox *p_sandbox) {
-  GList *p_sandboxes;
+// void mount_psandbox_event(size_t event_key, PSandbox *p_sandbox) {
+//   GList *p_sandboxes;
 
-  gint64 *key = g_new(gint64, 1);
-  (*key) = event_key;
+//   gint64 *key = g_new(gint64, 1);
+//   (*key) = event_key;
 
-  if (psandbox_transfer_event_map == NULL) {
-    psandbox_transfer_event_map = g_hash_table_new(g_int64_hash, g_int64_equal);
-  }
+//   if (psandbox_transfer_event_map == NULL) {
+//     psandbox_transfer_event_map = g_hash_table_new(g_int64_hash, g_int64_equal);
+//   }
 
-  pthread_mutex_lock(&psandbox_transfer_event_lock);
-  p_sandboxes = g_hash_table_lookup(psandbox_transfer_event_map, key);
+//   pthread_mutex_lock(&psandbox_transfer_event_lock);
+//   p_sandboxes = g_hash_table_lookup(psandbox_transfer_event_map, key);
 
-  if (p_sandboxes == NULL) {
-    p_sandboxes = g_list_append(p_sandboxes, p_sandbox);
-    g_hash_table_insert(psandbox_transfer_event_map, key, p_sandboxes);
-  } else {
-    g_list_append(p_sandboxes, p_sandbox);
-  }
-  pthread_mutex_unlock(&psandbox_transfer_event_lock);
-}
+//   if (p_sandboxes == NULL) {
+//     p_sandboxes = g_list_append(p_sandboxes, p_sandbox);
+//     g_hash_table_insert(psandbox_transfer_event_map, key, p_sandboxes);
+//   } else {
+//     g_list_append(p_sandboxes, p_sandbox);
+//   }
+//   pthread_mutex_unlock(&psandbox_transfer_event_lock);
+// }
 
-PSandbox *unmount_psandbox(size_t thread_self, size_t event_key) {
+PSandbox *bind_psandbox(size_t addr) {
   PSandbox *p_sandbox = NULL;
-  GList *p_sandboxes, *tl;
+  // GList *p_sandboxes, *tl;
 
+  int sandbox_id = (int) syscall(SYS_BIND_PSANDBOX, addr);
+  
   gint64 *key = g_new(gint64, 1);
-  (*key) = thread_self;
-  // TODO checkfor g_new fail...
+  (*key) = addr;
 
-  // SYSCALL resume ...
+  pthread_mutex_lock(&psandbox_transfer_lock);
+  p_sandbox = g_hash_table_lookup(psandbox_transfer_map, key);
+  if (p_sandbox) {
+    g_hash_table_remove(psandbox_transfer_map, key);
+  }
+  pthread_mutex_unlock(&psandbox_transfer_lock);
 
-  // printf("111\n");
-  // pthread_mutex_lock(&psandbox_transfer_thread_lock);
-  // p_sandbox = g_hash_table_lookup(psandbox_transfer_thread_map, key);
-  // if (p_sandbox) {
-  //   g_hash_table_remove(psandbox_transfer_thread_map, key);
-  // }
-  // pthread_mutex_unlock(&psandbox_transfer_thread_lock);
-  // printf("222\n");
+  // TODO check for  psandbox fail
+  p_sandbox->bid = sandbox_id;
 
-  if (p_sandbox == NULL) {
-    (*key) = event_key;
-    pthread_mutex_lock(&psandbox_transfer_event_lock);
-    p_sandboxes = g_hash_table_lookup(psandbox_transfer_event_map, key);
-    if (p_sandboxes) {
-      tl = g_list_last(p_sandboxes);
-      p_sandbox = (PSandbox *) tl->data;
-      p_sandboxes = g_list_remove(p_sandboxes, p_sandbox);
-      if (p_sandboxes == NULL) {
-        g_hash_table_remove(psandbox_transfer_event_map, key);
-      }
-    }
-    pthread_mutex_unlock(&psandbox_transfer_event_lock);
-  } 
+  printf("bind psandbox %d\n", p_sandbox->bid);
+
+  // if (p_sandbox == NULL) {
+  //   (*key) = event_key;
+  //   pthread_mutex_lock(&psandbox_transfer_event_lock);
+  //   p_sandboxes = g_hash_table_lookup(psandbox_transfer_event_map, key);
+  //   if (p_sandboxes) {
+  //     tl = g_list_last(p_sandboxes);
+  //     p_sandbox = (PSandbox *) tl->data;
+  //     p_sandboxes = g_list_remove(p_sandboxes, p_sandbox);
+  //     if (p_sandboxes == NULL) {
+  //       g_hash_table_remove(psandbox_transfer_event_map, key);
+  //     }
+  //   }
+  //   pthread_mutex_unlock(&psandbox_transfer_event_lock);
+  // } 
 
   return p_sandbox;
 }
