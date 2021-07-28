@@ -193,9 +193,9 @@ PSandbox *get_psandbox() {
 
 void unbind_psandbox(size_t addr, PSandbox *p_sandbox) {
 
-  printf("unbind psandbox %d\n", p_sandbox->bid);
-
+  printf("unbind psandbox syscall %d Start\n", p_sandbox->bid);
   syscall(SYS_UNBIND_PSANDBOX, addr); 
+  printf("unbind psandbox syscall %d End\n", p_sandbox->bid);
   p_sandbox->bid = -1;
   
   gint64 *key = g_new(gint64, 1);
@@ -237,6 +237,7 @@ PSandbox *bind_psandbox(size_t addr) {
   PSandbox *p_sandbox = NULL;
   // GList *p_sandboxes, *tl;
 
+  printf("bind psandbox dd syscall Start\n");
   int sandbox_id = (int) syscall(SYS_BIND_PSANDBOX, addr);
   
   gint64 *key = g_new(gint64, 1);
@@ -249,10 +250,10 @@ PSandbox *bind_psandbox(size_t addr) {
   }
   pthread_mutex_unlock(&psandbox_transfer_lock);
 
-  // TODO check for  psandbox fail
+  // TODO check for psandbox fail
   p_sandbox->bid = sandbox_id;
 
-  printf("bind psandbox %d\n", p_sandbox->bid);
+  printf("bind psandbox %d syscall End\n", p_sandbox->bid);
 
   // if (p_sandbox == NULL) {
   //   (*key) = event_key;
