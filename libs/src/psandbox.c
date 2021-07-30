@@ -128,7 +128,10 @@ PSandbox *create_psandbox() {
   p_sandbox->action_level = LOW_PRIORITY;
   p_sandbox->compensation_ticket = 0;
   p_sandbox->total_activity = 0;
-
+  p_sandbox->is_adding = 0;
+  p_sandbox->count = 0;
+  p_sandbox->s_count = 0;
+  p_sandbox->total_time = 0;
   if (psandbox_map == NULL) {
     psandbox_map = g_hash_table_new(g_int_hash, g_int_equal);
   }
@@ -157,7 +160,8 @@ int release_psandbox(PSandbox *p_sandbox) {
   }
   *key = (int) p_sandbox->bid;
   g_hash_table_remove(psandbox_map, key);
-
+  printf("the total time is %ld ns, pid %d\n", p_sandbox->total_time, p_sandbox->bid);
+  printf("the count is %ld ns, the total time is %ld ns, for pid %d\n",p_sandbox->count,p_sandbox->total_time, p_sandbox->bid);
   free(p_sandbox->activity);
   free(p_sandbox);
   return success;
@@ -201,55 +205,79 @@ int add_rules(int total_types, double *defer_rule) {
   return 1;
 }
 
+
 int update_psandbox(BoxEvent *event, PSandbox *p_sandbox) {
   int success = 0;
   int event_type = event->event_type;
   unsigned long key = (unsigned long) event->key;
   GList *competitors, *interfered_psandboxs, *holders;
-
+  struct timespec  start, stop;
   if (!event->key || !p_sandbox || !p_sandbox->activity) {
     return -1;
   }
+  if(p_sandbox->is_adding){
 
-  if (competitors_map == NULL) {
-    competitors_map = g_hash_table_new(g_direct_hash, g_direct_equal);
+    return 1;
+  }
+  // use the macro and ifdef to define the tracing part
+  if(!p_sandbox->flag) {
+    clock_gettime(CLOCK_REALTIME,&p_sandbox->every_second_start);
+    p_sandbox->flag++;
   }
 
-  if (holders_map == NULL) {
-    holders_map = g_hash_table_new(g_direct_hash, g_direct_equal);
+  clock_gettime(CLOCK_REALTIME,&start);
+  syscall(SYS_UPDATE_EVENT,event,p_sandbox->bid);
+  clock_gettime(CLOCK_REALTIME,&stop);
+  long time = time2ns(timeDiff(start,stop));
+  long s_time = time2ns(timeDiff(p_sandbox->every_second_start,stop));
+  p_sandbox->total_time = p_sandbox->total_time + time;
+  p_sandbox->count++;
+  p_sandbox->s_count++;
+  if((double )(s_time)/1000000000 > 3) {
+    printf("tps %d, psandbox %d\n",p_sandbox->s_count, p_sandbox->bid);
+    p_sandbox->s_count = 0;
+    clock_gettime(CLOCK_REALTIME,&p_sandbox->every_second_start);
   }
 
-  if (interfered_competitors == NULL) {
-    interfered_competitors = g_hash_table_new(g_direct_hash, g_direct_equal);
-  }
+//  if (competitors_map == NULL) {
+//    competitors_map = g_hash_table_new(g_direct_hash, g_direct_equal);
+//  }
+//
+//  if (holders_map == NULL) {
+//    holders_map = g_hash_table_new(g_direct_hash, g_direct_equal);
+//  }
+//
+//  if (interfered_competitors == NULL) {
+//    interfered_competitors = g_hash_table_new(g_direct_hash, g_direct_equal);
+//  }
+//
+//  if (p_sandbox->state == BOX_FREEZE)
+//    return 0;
 
-  if (p_sandbox->state == BOX_FREEZE)
-    return 0;
 
-
-  switch (event_type) {
-    case PREPARE:{
+//  switch (event_type) {
+//    case PREPARE:{
 //      pthread_mutex_lock(&stats_lock);
 //      clock_gettime(CLOCK_REALTIME, &p_sandbox->activity->delaying_start);
 //      p_sandbox->activity->activity_state = QUEUE_WAITING;
-
+//
 //      competitors = g_hash_table_lookup(competitors_map, GINT_TO_POINTER(key));
 //      competitors = g_list_append(competitors, p_sandbox);
 //      g_hash_table_insert(competitors_map, GINT_TO_POINTER(key), competitors);
-//      printf("PREPARE the size is %d, the key is %d, %d\n",g_list_length(competitors), (*(int *)event->key),p_sandbox->bid);
+////      printf("PREPARE the size is %d, the key is %d, %d\n",g_list_length(competitors),event->key,p_sandbox->bid);
 //      if (p_sandbox->action_level == HIGHEST_PRIORITY) {
 //        interfered_psandboxs = g_hash_table_lookup(interfered_competitors, GINT_TO_POINTER(key));
 //        interfered_psandboxs = g_list_append(interfered_psandboxs, p_sandbox);
 //        g_hash_table_insert(interfered_competitors, GINT_TO_POINTER(key), interfered_psandboxs);
 //      }
-      syscall(SYS_UPDATE_EVENT,event,p_sandbox->bid);
+//      syscall(SYS_UPDATE_EVENT,event,p_sandbox->bid);
 //      pthread_mutex_unlock(&stats_lock);
-      break;
-    }
-    case ENTER:{
+//      break;
+//    }
+//    case ENTER:{
 //      GList *iterator;
-      syscall(SYS_UPDATE_EVENT,event,p_sandbox->bid);
-//      printf("ENTER get the mutex psandbox %d,the key is %d\n",p_sandbox->bid,(*(int *)event->key));
+//      syscall(SYS_UPDATE_EVENT,event,p_sandbox->bid);
+////      printf("ENTER get the mutex psandbox %d,the key is %d\n",p_sandbox->bid,event->key);
 //      pthread_mutex_lock(&stats_lock);
 //      competitors = g_hash_table_lookup(competitors_map, GINT_TO_POINTER(key));
 //      competitors = g_list_remove(competitors, p_sandbox);
@@ -279,11 +307,11 @@ int update_psandbox(BoxEvent *event, PSandbox *p_sandbox) {
 //      }
 //      updateDefertime(p_sandbox);
 //      pthread_mutex_unlock(&stats_lock);
-      break;
-    }
-    case EXIT:
-    {
-      syscall(SYS_UPDATE_EVENT,event,p_sandbox->bid);
+//      break;
+//    }
+//    case HOLD:
+//    {
+//      syscall(SYS_UPDATE_EVENT,event,p_sandbox->bid);
 //      pthread_mutex_lock(&stats_lock);
 //      GList *iterator = NULL;
 //      p_sandbox->activity->activity_state = QUEUE_EXIT;
@@ -319,20 +347,20 @@ int update_psandbox(BoxEvent *event, PSandbox *p_sandbox) {
 //          syscall(SYS_WAKEUP_PSANDBOX, victim->bid);
 //        }
 //      }
-
-//      if (is_interfered(p_sandbox, event, holders)) {
-//        PSandbox* noisy_neighbor;
-//        noisy_neighbor = find_noisyNeighbor(p_sandbox, holders);
 //
-//        if (noisy_neighbor) {
-//          //Give penalty to the noisy neighbor
-//          printf("1.thread %lu sleep thread %lu\n", p_sandbox->bid, noisy_neighbor->bid);
-//          penalize_competitor(noisy_neighbor,p_sandbox,event);
-//        }
-//      }
+////      if (is_interfered(p_sandbox, event, holders)) {
+////        PSandbox* noisy_neighbor;
+////        noisy_neighbor = find_noisyNeighbor(p_sandbox, holders);
+////
+////        if (noisy_neighbor) {
+////          //Give penalty to the noisy neighbor
+////          printf("1.thread %lu sleep thread %lu\n", p_sandbox->bid, noisy_neighbor->bid);
+////          penalize_competitor(noisy_neighbor,p_sandbox,event);
+////        }
+////      }
 //      pthread_mutex_unlock(&stats_lock);
-      break;
-    }
+//      break;
+//    }
 //    case MUTEX_RELEASE: {
 //      time_t penalty_ns;
 //
@@ -350,7 +378,7 @@ int update_psandbox(BoxEvent *event, PSandbox *p_sandbox) {
 //      if (p_sandbox->state == BOX_PENDING_PENALTY) {
 //          if (p_sandbox->activity->owned_mutex == 0) {
 //              // FIXME why -- to key since you basically replace that box w/ this one
-//              // TODO still need this tmp value??? same in EXIT
+//              // TODO still need this tmp value??? same in HOLD
 //              penalty_ns = 100000;
 //              printf("2.thread %lu sleep thread %lu\n", p_sandbox->victim->bid, p_sandbox->bid);
 //              (*(int *)p_sandbox->victim->activity->key)--;
@@ -373,10 +401,7 @@ int update_psandbox(BoxEvent *event, PSandbox *p_sandbox) {
 //      }
 //      break;
 //    }
-
-
-
-  }
+//  }
   return success;
 }
 
@@ -460,19 +485,17 @@ int penalize_competitor(PSandbox *noisy_neighbor, PSandbox *victim, BoxEvent *ev
     noisy_neighbor->victim = victim;
   } else {
     time_t penalty_us = 1000;
-    (*(int *) event->key)--;
     noisy_neighbor->activity->activity_state = QUEUE_PREEMPTED;
     victim->noisy_neighbor = noisy_neighbor;
     victim->activity->activity_state = QUEUE_PROMOTED;
-    printf("call compensate\n");
     syscall(SYS_COMPENSATE_PSANDBOX, noisy_neighbor->bid, victim->bid ,penalty_us);
   }
   return 0;
 }
 
 void active_psandbox(PSandbox *p_sandbox) {
-  if (!p_sandbox || !p_sandbox->activity) {
-    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
+  if (!p_sandbox || !p_sandbox->activity || p_sandbox->is_adding) {
+//    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
     return;
   }
 //  p_sandbox->total_activity++;
@@ -484,8 +507,8 @@ void active_psandbox(PSandbox *p_sandbox) {
 
 void freeze_psandbox(PSandbox *p_sandbox) {
   struct timespec current_tm;
-  if (!p_sandbox || !p_sandbox->activity) {
-    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
+  if (!p_sandbox || !p_sandbox->activity || p_sandbox->is_adding) {
+//    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
     return;
   }
 
@@ -518,7 +541,7 @@ void freeze_psandbox(PSandbox *p_sandbox) {
 //      p_sandbox->compensation_ticket = COMPENSATION_TICKET_NUMBER;
 //    }
 //  }
-
+//
 //  memset(p_sandbox->activity, 0, sizeof(Activity));
 }
 
@@ -540,7 +563,7 @@ void freeze_psandbox(PSandbox *p_sandbox) {
 //        p_sandbox->activity->queue_event++;
 //      }
 //      break;
-//    case EXIT:
+//    case HOLD:
 //      if (event->key_size == 1) {
 //        p_sandbox->activity->owned_mutex--;
 //      } else {

@@ -82,7 +82,7 @@ void srv_conc_enter_innodb(){
 //    pthread_mutex_lock(&mutex);
     os_thread_sleep(sleep_in_us);
 
-    event.event_type = EXIT;
+    event.event_type = HOLD;
     event.key = (size_t)&n_active;
 
     update_psandbox(&event, psandbox);

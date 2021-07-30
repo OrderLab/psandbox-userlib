@@ -126,7 +126,7 @@ retry:
 
     pthread_mutex_unlock(&mutex);
 
-    event.event_type = EXIT;
+    event.event_type = HOLD;
     event.key =(size_t) &n_pending_flushes;
     update_psandbox(&event, sandbox);
   }

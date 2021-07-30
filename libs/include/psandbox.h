@@ -32,7 +32,8 @@ extern "C" {
 enum enum_event_type {
   PREPARE,
   ENTER,
-  EXIT,
+  HOLD,
+  UNHOLD
 };
 
 //Add comment for each enum type to describe the semantic and the constrains of the action for that state
@@ -45,9 +46,6 @@ enum enum_psandbox_state {
   BOX_PENDING_PENALTY // the penalty is pending
 };
 
-enum enum_condition {
-  COND_LARGE, COND_SMALL, COND_LARGE_OR_EQUAL, COND_SMALL_OR_EQUAL
-};
 
 enum enum_activity_state {
   QUEUE_WAITING,QUEUE_ENTER,QUEUE_EXIT,QUEUE_PREEMPTED,QUEUE_PROMOTED
@@ -69,7 +67,7 @@ typedef struct activity {
   int owned_mutex; //TODO: use a slab to store each element and get one from the pool when you need to use it.
   int is_preempted;
   int queue_event;
-  void *key;
+  unsigned int key;
 } Activity;
 
 typedef struct pSandbox {
@@ -87,12 +85,13 @@ typedef struct pSandbox {
 
   //debugging
   int total_activity;
+  int count;
+  clock_t total_time;
+  int is_adding;
+  int s_count;
+  struct timespec  every_second_start;
+  int flag;
 } PSandbox;
-
-typedef struct condition {
-  int value;
-  enum enum_condition compare;
-} Condition;
 
 
 
@@ -116,13 +115,6 @@ int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox);
 void active_psandbox(PSandbox *p_sandbox);
 void freeze_psandbox(PSandbox *p_sandbox);
 PSandbox *get_psandbox();
-
-/// @brief Update the queue condition to enter the queue
-/// @param key The key of the queue
-/// @param cond The condition for the current queue
-/// @return On success 0 is returned.
-/// The function must be called right after the try queue update
-int psandbox_update_condition(int *keys, Condition cond);
 
 int psandbox_manager_init();
 
