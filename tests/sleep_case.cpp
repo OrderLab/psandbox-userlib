@@ -84,32 +84,22 @@ int mysql_insert() {
 }
 
 void log_write_up_to(ibool flush_to_disk) {
-  BoxEvent event;
   if (flush_to_disk) {
-
-    PSandbox *sandbox = get_psandbox();
-
-    event.event_type = PREPARE;
-    event.key = (size_t)&n_pending_flushes;
-    update_psandbox(&event, sandbox);
+    update_psandbox((size_t)&n_pending_flushes, PREPARE);
 
 
     pthread_mutex_lock(&mutex);
 retry:
     if(n_pending_flushes>0) {
-      pthread_mutex_unlock(&mutex);
-
+      pthread_mutex_
+      nlock(&mutex);
       os_thread_sleep(5000000);
-
-
       pthread_mutex_lock(&mutex);
 
       goto retry;
     }
 
-    event.event_type = ENTER;
-    event.key = (size_t)&n_pending_flushes;
-    update_psandbox(&event, sandbox);
+    update_psandbox((size_t)&n_pending_flushes, ENTER);
 
     n_pending_flushes++;
 
@@ -125,10 +115,7 @@ retry:
     n_pending_flushes--;
 
     pthread_mutex_unlock(&mutex);
-
-    event.event_type = HOLD;
-    event.key =(size_t) &n_pending_flushes;
-    update_psandbox(&event, sandbox);
+    update_psandbox((size_t) &n_pending_flushes, HOLD);
   }
 }
 

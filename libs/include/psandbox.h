@@ -26,8 +26,8 @@ extern "C" {
 #define MID_PRIORITY 1
 #define LOW_PRIORITY 0
 
-#define COMPENSATION_TICKET_NUMBER	1000L
-#define PROBING_NUMBER 100
+#define DBUG_TRACE(A) clock_gettime(CLOCK_REALTIME,A)
+
 
 enum enum_event_type {
   PREPARE,
@@ -84,13 +84,10 @@ typedef struct pSandbox {
   struct pSandbox *victim;
 
   //debugging
-  int total_activity;
   int count;
   clock_t total_time;
-  int is_adding;
   int s_count;
   struct timespec  every_second_start;
-  int flag;
 } PSandbox;
 
 
@@ -110,7 +107,7 @@ int add_rules(int total_types, double* defer_rule);
 /// @param event The event to notify the performance p_sandbox.
 /// @param p_sandbox The p_sandbox to notify
 /// @return On success 1 is returned.
-int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox);
+int update_psandbox(unsigned int key, enum enum_event_type event_type);
 
 void active_psandbox(PSandbox *p_sandbox);
 void freeze_psandbox(PSandbox *p_sandbox);
