@@ -91,7 +91,7 @@ void log_write_up_to(ibool flush_to_disk) {
     pthread_mutex_lock(&mutex);
 retry:
     if(n_pending_flushes>0) {
-      pthread_mutex_lock(&mutex);
+      pthread_mutex_unlock(&mutex);
       os_thread_sleep(5000000);
       pthread_mutex_lock(&mutex);
 
@@ -102,7 +102,7 @@ retry:
 
     n_pending_flushes++;
 
-    char *buffer = "Yigong Hu";
+    const char *buffer = "Yigong Hu";
     std::ofstream file;
     file.open("output.txt");
     file.write(buffer, 9);
