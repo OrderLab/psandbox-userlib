@@ -20,3 +20,6 @@ cmake ..
 make -j $(nproc)
 ```
 
+## Code Style
+
+Please refer to the [code style](codeStyle.md) for the coding convention and practice.
