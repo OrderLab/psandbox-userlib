@@ -91,8 +91,7 @@ void log_write_up_to(ibool flush_to_disk) {
     pthread_mutex_lock(&mutex);
 retry:
     if(n_pending_flushes>0) {
-      pthread_mutex_
-      nlock(&mutex);
+      pthread_mutex_lock(&mutex);
       os_thread_sleep(5000000);
       pthread_mutex_lock(&mutex);
 
