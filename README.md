@@ -1,5 +1,7 @@
 # PerfSandbox User-Level Library
 
+![build workflow](https://github.com/OrderLab/psandbox-userlib/actions/workflows/build.yml/badge.svg)
+
 ## Dependencies
 
 PSanbox user-level library depends on the `pkg-config` and `glib-2.0` libraries.
