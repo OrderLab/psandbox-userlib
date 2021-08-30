@@ -34,7 +34,7 @@
 #define NSEC_PER_USEC    1000L
 #define NSEC_PER_SEC 1000000000L
 #define USEC_PER_SEC 1000000L
-
+#define DISABLE_PSANDBOX
 GHashTable *psandbox_map;
 //GHashTable condition_map;
 double **rules;
@@ -83,6 +83,9 @@ int psandbox_manager_init() {
 
 PSandbox *create_psandbox() {
   struct pSandbox *p_sandbox;
+  #ifdef DISABLE_PSANDBOX
+  return NULL;
+#endif
   long sandbox_id;
   gint *key = g_new(gint, 1);
 
@@ -125,6 +128,9 @@ PSandbox *create_psandbox() {
 
 int release_psandbox(PSandbox *p_sandbox) {
   int success = 0;
+  #ifdef DISABLE_PSANDBOX
+  return NULL;
+  #endif
   gint *key = g_new(gint, 1);
   if (!p_sandbox)
     return success;
@@ -146,6 +152,9 @@ int release_psandbox(PSandbox *p_sandbox) {
 }
 
 PSandbox *get_psandbox() {
+  #ifdef DISABLE_PSANDBOX
+  return NULL;
+  #endif
   int bid = (int) syscall(SYS_GET_PSANDBOX);
 //  int bid = syscall(SYS_gettid);
   gint *key = g_new(gint, 1);
@@ -190,6 +199,10 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
 #ifdef TRACE_DEBUG
   struct timespec  start, stop;
 #endif
+
+#ifdef DISABLE_PSANDBOX
+  return 1;
+#endif
   PSandbox* psandbox = get_psandbox();
   if (!key || !psandbox || !psandbox->activity) {
     return -1;
@@ -202,7 +215,7 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
 #endif
   event.key = key;
   event.event_type = event_type;
-  syscall(SYS_UPDATE_EVENT,event,psandbox->bid);
+  syscall(SYS_UPDATE_EVENT,&event,psandbox->bid);
 #ifdef TRACE_DEBUG
   DBUG_TRACE(&stop);
   long time = time2ns(timeDiff(start,stop));
@@ -220,12 +233,16 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
 }
 
 void active_psandbox(PSandbox *p_sandbox) {
+
   if (!p_sandbox || !p_sandbox->activity) {
 //    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
     return;
   }
-
+#ifdef DISABLE_PSANDBOX
+  return ;
+#endif
   syscall(SYS_ACTIVE_PSANDBOX);
+
 }
 
 void freeze_psandbox(PSandbox *p_sandbox) {
@@ -233,7 +250,9 @@ void freeze_psandbox(PSandbox *p_sandbox) {
 //    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
     return;
   }
-
+#ifdef DISABLE_PSANDBOX
+  return ;
+#endif
   syscall(SYS_FREEZE_PSANDBOX);
 }
 

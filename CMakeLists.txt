@@ -11,7 +11,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
 
 SET(TRACE_DEBUG ON CACHE BOOL "PerfSandbox trace for debugging")
-
+SET(DISABLE_PSANDBOX ON CACHE BOOL "PerfSandbox disable")
 
 include_directories(${GLIB_INCLUDE_DIRS})
 link_directories(${GLIB_LIBRARY_DIRS})
