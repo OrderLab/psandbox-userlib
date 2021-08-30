@@ -5,6 +5,8 @@ set(TEST_SOURCES
   queue_1_case.cpp
   queue_case.cpp
   sleep_case.cpp
+  ownership_transfer_case_1.cpp
+  ownership_transfer_case_2.cpp
 )
 
 foreach(TEST_SOURCE_FILE ${TEST_SOURCES})

@@ -110,6 +110,25 @@ void active_psandbox(PSandbox *p_sandbox);
 void freeze_psandbox(PSandbox *p_sandbox);
 PSandbox *get_psandbox();
 
+/// The functions are to transfer psandbox ownership between threads
+/// Case A, thread A -> B, A knows B's thread id
+///   In A, call mount_psandbox (A_p_sandbox, B's thread id)
+///     -> this stop tracing the current task and 
+///        mount psandbox in to a global struct for B to recieve
+///   In B, call unmount_psandbox()
+///     -> this lookup the global struct to recieve its 
+/// Case B, thread A -> B, A doesn't know B's thread id
+///   solution, another global struct, B's get pbox by the same event key?
+///   unmount, iterate first global struct, if no, check the second for the 
+///   same key
+void unbind_psandbox(size_t addr, PSandbox *p_sandbox);
+PSandbox *bind_psandbox(size_t addr);
+
+// unbind and bind
+// task is 1-1 descripted to a struct which is a unique address in memory 
+// 
+
+
 int psandbox_manager_init();
 
 int track_mutex(struct sandboxEvent *event, PSandbox *p_sandbox);
