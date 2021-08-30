@@ -48,13 +48,7 @@ os_thread_sleep(
 }
 
 void srv_conc_enter_innodb(){
-  struct sandboxEvent event;
-  PSandbox *psandbox = get_psandbox();
-
-  event.event_type = PREPARE;
-  event.key = (size_t)&n_active;
-  update_psandbox(&event, psandbox);
-
+  update_psandbox((size_t)&n_active, PREPARE);
 
   for (;;) {
     int	sleep_in_us;
@@ -83,9 +77,8 @@ void* do_handle_one_connection(void* arg) {
   for(int i = 0; i < 5; i++) {
     struct sandboxEvent event;
     srv_conc_enter_innodb();
-    event.event_type = ENTER;
-    event.key = (size_t)&n_active;
-    update_psandbox(&event, psandbox);
+
+    update_psandbox((size_t)&n_active, ENTER);
     if(j > 0) {
       int sleep_in_us = 1000000 * 2;
       os_thread_sleep(sleep_in_us);

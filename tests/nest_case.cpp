@@ -48,13 +48,7 @@ os_thread_sleep(
 }
 
 void srv_conc_enter_innodb(){
-  struct sandboxEvent event;
-  PSandbox *psandbox = get_psandbox();
-
-  event.event_type = PREPARE;
-  event.key = (size_t)&n_active;
-
-  update_psandbox(&event, psandbox);
+  update_psandbox((size_t)&n_active, PREPARE);
 
 
 //  pthread_mutex_lock(&mutex);
@@ -66,11 +60,7 @@ void srv_conc_enter_innodb(){
       int active = os_atomic_increment(
           &n_active, 1);
       if (active <= srv_thread_concurrency) {
-
-        event.event_type = ENTER;
-        event.key = (size_t)&n_active;
-
-        update_psandbox(&event, psandbox);
+        update_psandbox((size_t)&n_active, ENTER);
 //        pthread_mutex_lock(&mutex);
         return;
       }
@@ -81,17 +71,12 @@ void srv_conc_enter_innodb(){
     sleep_in_us = srv_thread_sleep_delay;
 //    pthread_mutex_lock(&mutex);
     os_thread_sleep(sleep_in_us);
-
-    event.event_type = EXIT;
-    event.key = (size_t)&n_active;
-
-    update_psandbox(&event, psandbox);
+    update_psandbox((size_t)&n_active, HOLD);
   }
 
 }
 
 void* do_handle_one_connection(void* arg) {
-  BoxEvent event;
   int j = *(int *)arg;
   PSandbox* psandbox = create_psandbox();
 

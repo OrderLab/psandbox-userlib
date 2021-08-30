@@ -11,12 +11,11 @@
 #ifndef PSANDBOX_USERLIB_PSANDBOX_H
 #define PSANDBOX_USERLIB_PSANDBOX_H
 
-#include <stddef.h>
-#include <unistd.h>
-#include <sys/types.h>
-#include <stdbool.h>
 #include <pthread.h>
-
+#include <stdbool.h>
+#include <stddef.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,33 +25,29 @@ extern "C" {
 #define MID_PRIORITY 1
 #define LOW_PRIORITY 0
 
-#define COMPENSATION_TICKET_NUMBER	1000L
-#define PROBING_NUMBER 100
+#define DBUG_TRACE(A) clock_gettime(CLOCK_REALTIME, A)
 
-enum enum_event_type {
-  PREPARE,
-  ENTER,
-  EXIT,
-};
+enum enum_event_type { PREPARE, ENTER, HOLD, UNHOLD };
 
-//Add comment for each enum type to describe the semantic and the constrains of the action for that state
+// Add comment for each enum type to describe the semantic and the constrains of
+// the action for that state
 enum enum_psandbox_state {
-  BOX_ACTIVE, // psandbox starts to handle an activity
-  BOX_FREEZE, // psandbox finishs an activity
-  BOX_START, // create a psandbox
-  BOX_PREEMPTED, // psandbox is a noisy neighbor and being preempted by the victim
-  BOX_COMPENSATED, // psandbox is victim and is penalizing others
-  BOX_PENDING_PENALTY // the penalty is pending
-};
-
-enum enum_condition {
-  COND_LARGE, COND_SMALL, COND_LARGE_OR_EQUAL, COND_SMALL_OR_EQUAL
+  BOX_ACTIVE,       // psandbox starts to handle an activity
+  BOX_FREEZE,       // psandbox finishs an activity
+  BOX_START,        // create a psandbox
+  BOX_PREEMPTED,    // psandbox is a noisy neighbor and being preempted by the
+                    // victim
+  BOX_COMPENSATED,  // psandbox is victim and is penalizing others
+  BOX_PENDING_PENALTY  // the penalty is pending
 };
 
 enum enum_activity_state {
-  QUEUE_WAITING,QUEUE_ENTER,QUEUE_EXIT,QUEUE_PREEMPTED,QUEUE_PROMOTED
+  QUEUE_WAITING,
+  QUEUE_ENTER,
+  QUEUE_EXIT,
+  QUEUE_PREEMPTED,
+  QUEUE_PROMOTED
 };
-
 
 typedef struct sandboxEvent {
   enum enum_event_type event_type;
@@ -66,35 +61,33 @@ typedef struct activity {
   struct timespec execution_time;
   struct timespec execution_start;
   uint competitors;
-  int owned_mutex; //TODO: use a slab to store each element and get one from the pool when you need to use it.
+  int owned_mutex;  // TODO: use a slab to store each element and get one from
+                    // the pool when you need to use it.
   int is_preempted;
   int queue_event;
-  void *key;
+  unsigned int key;
 } Activity;
 
 typedef struct pSandbox {
-  long bid;    // sandbox id used by syscalls
+  long bid;  // sandbox id used by syscalls
   enum enum_psandbox_state state;
   Activity *activity;
-  double tail_threshold; // the maximum ratio of activity that are allowed to break the threshold
-  double max_defer; // the interference that allowed for each psandbox
+  double tail_threshold;  // the maximum ratio of activity that are allowed to
+                          // break the threshold
+  double max_defer;       // the interference that allowed for each psandbox
   int finished_activities;
   int bad_activities;
-  int action_level; // the psandbox is interferenced and needs future concern
+  int action_level;  // the psandbox is interferenced and needs future concern
   int compensation_ticket;
   struct pSandbox *noisy_neighbor;
   struct pSandbox *victim;
 
-  //debugging
-  int total_activity;
+  // debugging
+  int count;
+  clock_t total_time;
+  int s_count;
+  struct timespec every_second_start;
 } PSandbox;
-
-typedef struct condition {
-  int value;
-  enum enum_condition compare;
-} Condition;
-
-
 
 /// @brief Create a performance sandbox
 /// @return The point to the performance sandbox.
@@ -105,13 +98,13 @@ PSandbox *create_psandbox();
 /// @return On success 1 is return
 int release_psandbox(PSandbox *p_sandbox);
 
-int add_rules(int total_types, double* defer_rule);
+int add_rules(int total_types, double *defer_rule);
 
 /// @brief Update an event to the performance p_sandbox
 /// @param event The event to notify the performance p_sandbox.
 /// @param p_sandbox The p_sandbox to notify
 /// @return On success 1 is returned.
-int update_psandbox(struct sandboxEvent *event, PSandbox *p_sandbox);
+int update_psandbox(unsigned int key, enum enum_event_type event_type);
 
 void active_psandbox(PSandbox *p_sandbox);
 void freeze_psandbox(PSandbox *p_sandbox);
@@ -135,12 +128,6 @@ PSandbox *bind_psandbox(size_t addr);
 // task is 1-1 descripted to a struct which is a unique address in memory 
 // 
 
-/// @brief Update the queue condition to enter the queue
-/// @param key The key of the queue
-/// @param cond The condition for the current queue
-/// @return On success 0 is returned.
-/// The function must be called right after the try queue update
-int psandbox_update_condition(int *keys, Condition cond);
 
 int psandbox_manager_init();
 
@@ -153,4 +140,4 @@ void print_all();
 }
 #endif
 
-#endif //PSANDBOX_USERLIB_PSANDBOX_H
+#endif  // PSANDBOX_USERLIB_PSANDBOX_H
