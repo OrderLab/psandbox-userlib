@@ -102,7 +102,7 @@ retry:
 
     n_pending_flushes++;
 
-    char *buffer = "Yigong Hu";
+    const char *buffer = "Yigong Hu";
     std::ofstream file;
     file.open("output.txt");
     file.write(buffer, 9);
