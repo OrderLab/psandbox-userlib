@@ -45,6 +45,8 @@ double **rules;
 
 /* lock for updating the stats variables */
 pthread_mutex_t stats_lock = PTHREAD_MUTEX_INITIALIZER;
+/* lock for transfering psandbox ownership */
+pthread_mutex_t psandbox_transfer_lock = PTHREAD_MUTEX_INITIALIZER;
 
 typedef struct timespec Time;
 
@@ -71,10 +73,7 @@ static inline Time timeDiff(Time start, Time stop) {
   return result;
 }
 
-static inline void 
-
-
-Defertime(PSandbox *p_sandbox) {
+static inline void Defertime(PSandbox *p_sandbox) {
   struct timespec current_tm, defer_tm;
   clock_gettime(CLOCK_REALTIME, &current_tm);
   defer_tm = timeDiff(p_sandbox->activity->delaying_start, current_tm);
