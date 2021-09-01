@@ -82,7 +82,7 @@ int mysql_execute_command(enum_sql_command sql_command, int id) {
 int mysql_select(int id) {
   int loop = LOOP_BASE;
   int i;
-  PSandbox *sandbox = get_psandbox();
+  PSandbox *sandbox = get_current_psandbox();
   if (id == 0 ) {
     os_thread_sleep(10000);
   } else if (id >= 1 && id <=2) {

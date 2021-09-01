@@ -108,7 +108,7 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type);
 
 void active_psandbox(PSandbox *p_sandbox);
 void freeze_psandbox(PSandbox *p_sandbox);
-PSandbox *get_psandbox();
+PSandbox *get_current_psandbox();
 
 /// The functions are to transfer psandbox ownership between threads
 /// Case A, thread A -> B, A knows B's thread id
@@ -121,12 +121,9 @@ PSandbox *get_psandbox();
 ///   solution, another global struct, B's get pbox by the same event key?
 ///   unmount, iterate first global struct, if no, check the second for the 
 ///   same key
-void unbind_psandbox(size_t addr, PSandbox *p_sandbox);
+int unbind_psandbox(size_t addr, PSandbox *p_sandbox);
 PSandbox *bind_psandbox(size_t addr);
 
-// unbind and bind
-// task is 1-1 descripted to a struct which is a unique address in memory 
-// 
 
 
 int psandbox_manager_init();
