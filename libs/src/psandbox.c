@@ -33,21 +33,13 @@
 #define SYS_UNBIND_PSANDBOX 446
 #define SYS_BIND_PSANDBOX 447
 
-#define NSEC_PER_USEC    1000L
 #define NSEC_PER_SEC 1000000000L
-#define USEC_PER_SEC 1000000L
-//#define DISABLE_PSANDBOX
+
+#define DISABLE_PSANDBOX
 GHashTable *psandbox_map;
-//GHashTable condition_map;
-GHashTable *psandbox_transfer_map;
-// GHashTable *psandbox_transfer_event_map;
-double **rules;
 
 /* lock for updating the stats variables */
 pthread_mutex_t stats_lock = PTHREAD_MUTEX_INITIALIZER;
-/* lock for transfering psandbox ownership */
-pthread_mutex_t psandbox_transfer_lock = PTHREAD_MUTEX_INITIALIZER;
-
 typedef struct timespec Time;
 
 static inline Time timeAdd(Time t1, Time t2) {
@@ -110,13 +102,7 @@ PSandbox *create_psandbox() {
   Activity *act = (Activity *) calloc(1, sizeof(Activity));
   p_sandbox->activity = act;
   p_sandbox->bid = sandbox_id;
-  p_sandbox->state = BOX_START;
-  p_sandbox->max_defer = 1.0;
-  p_sandbox->tail_threshold = 0.2;
-  p_sandbox->bad_activities = 0;
-  p_sandbox->finished_activities = 0;
-  p_sandbox->action_level = LOW_PRIORITY;
-  p_sandbox->compensation_ticket = 0;
+  p_sandbox->pid = syscall(SYS_gettid);
   p_sandbox->count = 0;
   p_sandbox->s_count = 0;
   p_sandbox->total_time = 0;
@@ -139,17 +125,18 @@ int release_psandbox(PSandbox *p_sandbox) {
   return NULL;
   #endif
   gint *key = g_new(gint, 1);
+  *key = (int) p_sandbox->bid;
   if (!p_sandbox)
     return success;
 
-  success = (int) syscall(SYS_RELEASE_PSANDBOX, p_sandbox->bid);
+  success = (int) syscall(SYS_RELEASE_PSANDBOX, p_sandbox->pid);
 
   if (success == -1) {
     free(p_sandbox);
     printf("failed to release sandbox in the kernel: %s\n", strerror(errno));
     return success;
   }
-  *key = (int) p_sandbox->bid;
+
   pthread_mutex_lock(&stats_lock);
   g_hash_table_remove(psandbox_map, key);
   pthread_mutex_unlock(&stats_lock);
@@ -183,12 +170,15 @@ PSandbox *get_current_psandbox() {
 }
 
 int unbind_psandbox(size_t addr, PSandbox *p_sandbox) {
+  #ifdef DISABLE_PSANDBOX
+  return NULL;
+#endif
   if (!p_sandbox || !p_sandbox->activity) {
     return -1;
   }
   if(syscall(SYS_UNBIND_PSANDBOX, addr)) {
-    printf("unbind to psandbox %d\n", p_sandbox->bid);
-    p_sandbox->bid = -1;
+//    printf("unbind to psandbox %d\n", p_sandbox->bid);
+    p_sandbox->pid = -1;
     return 0;
   }
   printf("error: unbind fail for psandbox %d\n", p_sandbox->bid);
@@ -197,43 +187,30 @@ int unbind_psandbox(size_t addr, PSandbox *p_sandbox) {
 
 
 PSandbox *bind_psandbox(size_t addr) {
+  #ifdef DISABLE_PSANDBOX
+  return NULL;
+#endif
   PSandbox *p_sandbox = NULL;
+
   int bid = (int) syscall(SYS_BIND_PSANDBOX, addr);
-  
-  gint64 *key = g_new(gint64, 1);
+  gint *key = g_new(gint, 1);
   (*key) = bid;
 
   if (bid == -1)
     return NULL;
 
   pthread_mutex_lock(&stats_lock);
-  PSandbox *psandbox = (PSandbox *) g_hash_table_lookup(psandbox_map, key);
+  p_sandbox= (PSandbox *) g_hash_table_lookup(psandbox_map, key);
   pthread_mutex_unlock(&stats_lock);
-  if (NULL == psandbox) {
+  if (NULL == p_sandbox) {
     printf("Error: Can't bind sandbox for the thread %d\n", bid);
     return NULL;
   }
-  printf("bind to psandbox %d\n", p_sandbox->bid);
+  p_sandbox->pid = syscall(SYS_gettid);
+//  printf("bind the psandbox %d, with thread %d\n",p_sandbox->bid,p_sandbox->pid);
   return p_sandbox;
+
 }
-
-int add_rules(int total_types, double *defer_rule) {
-  if (!rules) {
-    rules = (double **) malloc(sizeof(double *) * total_types);
-    for (int i = 0; i < total_types; i++)
-      rules[i] = (double *) malloc(sizeof(double) * total_types);
-    if (!rules)
-      return -1;
-  }
-
-  for (int i = 0; i < total_types; i++) {
-    for (int j = 0; j < total_types; j++) {
-      rules[i][j] = *(defer_rule + i * total_types + j);
-    }
-  }
-  return 1;
-}
-
 
 int update_psandbox(unsigned int key, enum enum_event_type event_type) {
   int success = 0;
@@ -257,7 +234,7 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
 #endif
   event.key = key;
   event.event_type = event_type;
-  syscall(SYS_UPDATE_EVENT,&event,psandbox->bid);
+  syscall(SYS_UPDATE_EVENT,&event,psandbox->pid);
 #ifdef TRACE_DEBUG
   DBUG_TRACE(&stop);
   long time = time2ns(timeDiff(start,stop));

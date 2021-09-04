@@ -28,7 +28,7 @@ pthread_mutex_t mutex;
 int n_active = 0;
 int srv_thread_sleep_delay	= 10000;
 
-#define NUM_TASKS  2
+#define NUM_TASKS  5
 int thread_pool_size = 3;
 
 int mysqld_main();
@@ -76,8 +76,6 @@ void find_available_thread() {
 void* do_handle_one_task(void* arg) {
   int j = *(int *)arg;
 
-  printf("task %d  start\n", j);
-
   PSandbox *psandbox;
   psandbox = bind_psandbox(j);
 
@@ -89,7 +87,6 @@ void* do_handle_one_task(void* arg) {
     os_thread_sleep(sleep_in_us);
   }
 
-  printf("task %d  end\n", j);
   (void) os_atomic_decrement(&n_active, 1);
 
   release_psandbox(psandbox);

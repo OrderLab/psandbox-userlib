@@ -70,17 +70,9 @@ typedef struct activity {
 
 typedef struct pSandbox {
   long bid;  // sandbox id used by syscalls
-  enum enum_psandbox_state state;
+  long pid; // the thread that the perfSandbox is bound
   Activity *activity;
-  double tail_threshold;  // the maximum ratio of activity that are allowed to
-                          // break the threshold
-  double max_defer;       // the interference that allowed for each psandbox
-  int finished_activities;
-  int bad_activities;
-  int action_level;  // the psandbox is interferenced and needs future concern
-  int compensation_ticket;
-  struct pSandbox *noisy_neighbor;
-  struct pSandbox *victim;
+
 
   // debugging
   int count;
@@ -97,8 +89,6 @@ PSandbox *create_psandbox();
 /// @param p_sandbox The performance sandbox to release.
 /// @return On success 1 is return
 int release_psandbox(PSandbox *p_sandbox);
-
-int add_rules(int total_types, double *defer_rule);
 
 /// @brief Update an event to the performance p_sandbox
 /// @param event The event to notify the performance p_sandbox.
