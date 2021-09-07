@@ -22,7 +22,7 @@
 
 #define SYS_CREATE_PSANDBOX    436
 #define SYS_RELEASE_PSANDBOX 437
-#define SYS_GET_PSANDBOX 438
+#define SYS_GET_CURRENT_PSANDBOX 438
 #define SYS_WAKEUP_PSANDBOX 439
 #define SYS_PENALIZE_PSANDBOX 440
 #define SYS_COMPENSATE_PSANDBOX 441
@@ -32,10 +32,11 @@
 #define SYS_UPDATE_EVENT 445
 #define SYS_UNBIND_PSANDBOX 446
 #define SYS_BIND_PSANDBOX 447
+#define SYS_GET_PSANDBOX 448
 
 #define NSEC_PER_SEC 1000000000L
 
-#define DISABLE_PSANDBOX
+//#define DISABLE_PSANDBOX
 GHashTable *psandbox_map;
 
 /* lock for updating the stats variables */
@@ -150,8 +151,8 @@ PSandbox *get_current_psandbox() {
   #ifdef DISABLE_PSANDBOX
   return NULL;
   #endif
-//  int bid = (int) syscall(SYS_GET_PSANDBOX);
-  int bid = syscall(SYS_gettid);
+  int bid = (int) syscall(SYS_GET_CURRENT_PSANDBOX);
+//  int bid = syscall(SYS_gettid);
 
   gint *key = g_new(gint, 1);
   (*key) = bid;
@@ -169,6 +170,27 @@ PSandbox *get_current_psandbox() {
   return psandbox;
 }
 
+PSandbox *get_psandbox(int id) {
+  #ifdef DISABLE_PSANDBOX
+  return NULL;
+  #endif
+  int bid = (int) syscall(SYS_GET_PSANDBOX,id);
+  gint *key = g_new(gint, 1);
+  (*key) = bid;
+  if (bid == -1)
+    return NULL;
+
+  pthread_mutex_lock(&stats_lock);
+  PSandbox *psandbox = (PSandbox *) g_hash_table_lookup(psandbox_map, key);
+  pthread_mutex_unlock(&stats_lock);
+  if (NULL == psandbox) {
+    printf("Error: Can't get sandbox for the id %d\n", bid);
+    return NULL;
+  }
+
+  return psandbox;
+}
+
 int unbind_psandbox(size_t addr, PSandbox *p_sandbox) {
   #ifdef DISABLE_PSANDBOX
   return NULL;
@@ -177,7 +199,6 @@ int unbind_psandbox(size_t addr, PSandbox *p_sandbox) {
     return -1;
   }
   if(syscall(SYS_UNBIND_PSANDBOX, addr)) {
-//    printf("unbind to psandbox %d\n", p_sandbox->bid);
     p_sandbox->pid = -1;
     return 0;
   }
@@ -203,11 +224,11 @@ PSandbox *bind_psandbox(size_t addr) {
   p_sandbox= (PSandbox *) g_hash_table_lookup(psandbox_map, key);
   pthread_mutex_unlock(&stats_lock);
   if (NULL == p_sandbox) {
-    printf("Error: Can't bind sandbox for the thread %d\n", bid);
+    printf("Error: Can't bind sandbox %d for the thread\n", bid);
     return NULL;
   }
   p_sandbox->pid = syscall(SYS_gettid);
-//  printf("bind the psandbox %d, with thread %d\n",p_sandbox->bid,p_sandbox->pid);
+
   return p_sandbox;
 
 }

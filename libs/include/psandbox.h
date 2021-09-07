@@ -99,6 +99,7 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type);
 void active_psandbox(PSandbox *p_sandbox);
 void freeze_psandbox(PSandbox *p_sandbox);
 PSandbox *get_current_psandbox();
+PSandbox *get_psandbox(int key);
 
 /// The functions are to transfer psandbox ownership between threads
 /// Case A, thread A -> B, A knows B's thread id
