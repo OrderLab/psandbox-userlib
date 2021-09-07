@@ -23,16 +23,14 @@
 #define SYS_CREATE_PSANDBOX    436
 #define SYS_RELEASE_PSANDBOX 437
 #define SYS_GET_CURRENT_PSANDBOX 438
-#define SYS_WAKEUP_PSANDBOX 439
-#define SYS_PENALIZE_PSANDBOX 440
-#define SYS_COMPENSATE_PSANDBOX 441
+#define SYS_GET_PSANDBOX 439
 #define SYS_START_MANAGER 442
 #define SYS_ACTIVE_PSANDBOX 443
 #define SYS_FREEZE_PSANDBOX 444
 #define SYS_UPDATE_EVENT 445
 #define SYS_UNBIND_PSANDBOX 446
 #define SYS_BIND_PSANDBOX 447
-#define SYS_GET_PSANDBOX 448
+
 
 #define NSEC_PER_SEC 1000000000L
 
@@ -144,6 +142,7 @@ int release_psandbox(PSandbox *p_sandbox) {
 
   free(p_sandbox->activity);
   free(p_sandbox);
+  p_sandbox = NULL;
   return success;
 }
 
@@ -177,6 +176,7 @@ PSandbox *get_psandbox(int id) {
   int bid = (int) syscall(SYS_GET_PSANDBOX,id);
   gint *key = g_new(gint, 1);
   (*key) = bid;
+
   if (bid == -1)
     return NULL;
 
