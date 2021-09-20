@@ -29,33 +29,12 @@ extern "C" {
 
 enum enum_event_type { PREPARE, ENTER, HOLD, UNHOLD };
 
-// Add comment for each enum type to describe the semantic and the constrains of
-// the action for that state
-enum enum_psandbox_state {
-  BOX_ACTIVE,       // psandbox starts to handle an activity
-  BOX_FREEZE,       // psandbox finishs an activity
-  BOX_START,        // create a psandbox
-  BOX_PREEMPTED,    // psandbox is a noisy neighbor and being preempted by the
-                    // victim
-  BOX_COMPENSATED,  // psandbox is victim and is penalizing others
-  BOX_PENDING_PENALTY  // the penalty is pending
-};
-
-enum enum_activity_state {
-  QUEUE_WAITING,
-  QUEUE_ENTER,
-  QUEUE_EXIT,
-  QUEUE_PREEMPTED,
-  QUEUE_PROMOTED
-};
-
 typedef struct sandboxEvent {
   enum enum_event_type event_type;
   unsigned int key;
 } BoxEvent;
 
 typedef struct activity {
-  enum enum_activity_state activity_state;
   struct timespec defer_time;
   struct timespec delaying_start;
   struct timespec execution_time;
@@ -99,7 +78,7 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type);
 void active_psandbox(PSandbox *p_sandbox);
 void freeze_psandbox(PSandbox *p_sandbox);
 PSandbox *get_current_psandbox();
-PSandbox *get_psandbox(int key);
+PSandbox *get_psandbox(size_t addr);
 
 /// The functions are to transfer psandbox ownership between threads
 /// Case A, thread A -> B, A knows B's thread id

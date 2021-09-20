@@ -36,9 +36,11 @@
 
 //#define DISABLE_PSANDBOX
 GHashTable *psandbox_map;
+//GHashTable *psandbox_transfer_map;
 
 /* lock for updating the stats variables */
 pthread_mutex_t stats_lock = PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t transfer_lock = PTHREAD_MUTEX_INITIALIZER;
 typedef struct timespec Time;
 
 static inline Time timeAdd(Time t1, Time t2) {
@@ -169,11 +171,11 @@ PSandbox *get_current_psandbox() {
   return psandbox;
 }
 
-PSandbox *get_psandbox(int id) {
+PSandbox *get_psandbox(size_t addr) {
   #ifdef DISABLE_PSANDBOX
   return NULL;
   #endif
-  int bid = (int) syscall(SYS_GET_PSANDBOX,id);
+  int bid = (int) syscall(SYS_GET_PSANDBOX,addr);
   gint *key = g_new(gint, 1);
   (*key) = bid;
 
@@ -198,6 +200,18 @@ int unbind_psandbox(size_t addr, PSandbox *p_sandbox) {
   if (!p_sandbox || !p_sandbox->activity) {
     return -1;
   }
+
+//  guint *key = g_new(guint, 1);
+//  (*key) = addr;
+//
+//  if (psandbox_transfer_map == NULL) {
+//    psandbox_transfer_map = g_hash_table_new(g_int_hash, g_int_equal);
+//  }
+//
+//  pthread_mutex_lock(&transfer_lock);
+//  g_hash_table_insert(psandbox_transfer_map, key, p_sandbox);
+//  pthread_mutex_unlock(&transfer_lock);
+
   if(syscall(SYS_UNBIND_PSANDBOX, addr)) {
     p_sandbox->pid = -1;
     return 0;
@@ -213,6 +227,24 @@ PSandbox *bind_psandbox(size_t addr) {
 #endif
   PSandbox *p_sandbox = NULL;
 
+//  guint *key = g_new(guint, 1);
+//  (*key) = addr;
+//  if (psandbox_transfer_map == NULL) {
+//    psandbox_transfer_map = g_hash_table_new(g_int_hash, g_int_equal);
+//  }
+
+//  pthread_mutex_lock(&transfer_lock);
+//  p_sandbox= (PSandbox *) g_hash_table_lookup(psandbox_transfer_map, key);
+//
+//  pthread_mutex_unlock(&transfer_lock);
+//  if (NULL == p_sandbox) {
+//    printf("Error: Can't bind sandbox %d for the thread\n", syscall(SYS_gettid));
+//    return NULL;
+//  }
+//  pthread_mutex_lock(&transfer_lock);
+//  g_hash_table_remove(psandbox_transfer_map,key);
+//  pthread_mutex_unlock(&transfer_lock);
+//  p_sandbox->pid =  (int) syscall(SYS_BIND_PSANDBOX, p_sandbox->bid);
   int bid = (int) syscall(SYS_BIND_PSANDBOX, addr);
   gint *key = g_new(gint, 1);
   (*key) = bid;
@@ -228,9 +260,7 @@ PSandbox *bind_psandbox(size_t addr) {
     return NULL;
   }
   p_sandbox->pid = syscall(SYS_gettid);
-
   return p_sandbox;
-
 }
 
 int update_psandbox(unsigned int key, enum enum_event_type event_type) {
