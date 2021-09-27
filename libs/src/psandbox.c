@@ -82,40 +82,19 @@ int psandbox_manager_init() {
 }
 
 int create_psandbox() {
-//  struct pSandbox *p_sandbox;
+
 #ifdef DISABLE_PSANDBOX
   return -1;
 #endif
   long sandbox_id;
-//  gint *key = g_new(gint, 1);
-
-//  p_sandbox = (struct pSandbox *) malloc(sizeof(struct pSandbox));
-//  if (p_sandbox == NULL) return NULL;
 
   sandbox_id = syscall(SYS_CREATE_PSANDBOX);
 //  sandbox_id = syscall(SYS_gettid);
   if (sandbox_id == -1) {
-//    free(p_sandbox);
+
     printf("syscall failed with errno: %s\n", strerror(errno));
     return NULL;
   }
-
-//  Activity *act = (Activity *) calloc(1, sizeof(Activity));
-//  p_sandbox->activity = act;
-//  p_sandbox->bid = sandbox_id;
-//  p_sandbox->pid = syscall(SYS_gettid);
-//  p_sandbox->count = 0;
-//  p_sandbox->s_count = 0;
-//  p_sandbox->total_time = 0;
-//  if (psandbox_map == NULL) {
-//    psandbox_map = g_hash_table_new(g_int_hash, g_int_equal);
-//  }
-//
-//  *key = (int) (sandbox_id);
-//
-//  pthread_mutex_lock(&stats_lock);
-//  g_hash_table_insert(psandbox_map, key, p_sandbox);
-//  pthread_mutex_unlock(&stats_lock);
 
   return sandbox_id;
 }
@@ -125,8 +104,7 @@ int release_psandbox(int pid) {
   #ifdef DISABLE_PSANDBOX
   return -1;
   #endif
-//  gint *key = g_new(gint, 1);
-//  *key = (int) p_sandbox->bid;
+
   if (pid != -1)
     return success;
 
@@ -136,10 +114,6 @@ int release_psandbox(int pid) {
     printf("failed to release sandbox in the kernel: %s\n", strerror(errno));
     return success;
   }
-
-//  pthread_mutex_lock(&stats_lock);
-//  g_hash_table_remove(psandbox_map, key);
-//  pthread_mutex_unlock(&stats_lock);
 
   return success;
 }
@@ -156,45 +130,25 @@ int get_current_psandbox() {
     return -1;
   }
 
-
-//  pthread_mutex_lock(&stats_lock);
-//  PSandbox *psandbox = (PSandbox *) g_hash_table_lookup(psandbox_map, key);
-//  pthread_mutex_unlock(&stats_lock);
-//  if (NULL == psandbox) {
-//    printf("Error: Can't get sandbox %d for the thread %d\n", bid, syscall(SYS_gettid));
-//    return 0;
-//  }
-
-return pid;
+  return pid;
 }
 
 int get_psandbox(size_t addr) {
   #ifdef DISABLE_PSANDBOX
   return -1;
   #endif
-  int bid = (int) syscall(SYS_GET_PSANDBOX,addr);
-  gint *key = g_new(gint, 1);
-  (*key) = bid;
+  int pid = (int) syscall(SYS_GET_PSANDBOX, addr);
 
-  if (bid == -1) {
-    printf("Error: Can't get sandbox for the id %d\n", bid);
+  if (pid == -1) {
+    printf("Error: Can't get sandbox for the id %d\n", pid);
     return -1;
   }
 
-
-//  pthread_mutex_lock(&stats_lock);
-//  PSandbox *psandbox = (PSandbox *) g_hash_table_lookup(psandbox_map, key);
-//  pthread_mutex_unlock(&stats_lock);
-//  if (NULL == psandbox) {
-//    printf("Error: Can't get sandbox for the id %d\n", bid);
-//    return NULL;
-//  }
-
-return bid;
+  return pid;
 }
 
 int unbind_psandbox(size_t addr, int bid) {
-  #ifdef DISABLE_PSANDBOX
+#ifdef DISABLE_PSANDBOX
   return -1;
 #endif
   if (bid == -1) {
@@ -214,51 +168,35 @@ int bind_psandbox(size_t addr) {
   #ifdef DISABLE_PSANDBOX
   return -1;
 #endif
-//  PSandbox *p_sandbox = NULL;
 
   int bid = (int) syscall(SYS_BIND_PSANDBOX, addr);
-//  gint *key = g_new(gint, 1);
-//  (*key) = bid;
 
   if (bid == -1) {
     printf("Error: Can't bind sandbox %d for the thread\n", bid);
     return -1;
   }
 
-
-//  pthread_mutex_lock(&stats_lock);
-//  p_sandbox= (PSandbox *) g_hash_table_lookup(psandbox_map, key);
-//  pthread_mutex_unlock(&stats_lock);
-//  if (NULL == p_sandbox) {
-//    printf("Error: Can't bind sandbox %d for the thread\n", bid);
-//    return NULL;
-//  }
   return bid;
 }
 
 int update_psandbox(unsigned int key, enum enum_event_type event_type) {
   int success = 0;
   BoxEvent event;
-#ifdef TRACE_DEBUG
-  struct timespec  start, stop;
-#endif
+
 
 #ifdef DISABLE_PSANDBOX
   return 1;
 #endif
-  PSandbox* psandbox = get_current_psandbox();
-  if (!key || !psandbox || !psandbox->activity) {
-    return -1;
-  }
-
 
 #ifdef TRACE_DEBUG
+  struct timespec  start, stop;
+
   DBUG_TRACE(&p_sandbox->every_second_start);
   DBUG_TRACE(&start);
 #endif
   event.key = key;
   event.event_type = event_type;
-  syscall(SYS_UPDATE_EVENT,&event,psandbox->pid);
+  syscall(SYS_UPDATE_EVENT,&event);
 #ifdef TRACE_DEBUG
   DBUG_TRACE(&stop);
   long time = time2ns(timeDiff(start,stop));
