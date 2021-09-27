@@ -62,12 +62,12 @@ typedef struct pSandbox {
 
 /// @brief Create a performance sandbox
 /// @return The point to the performance sandbox.
-PSandbox *create_psandbox();
+int create_psandbox();
 
 /// @brief release a performance sandbox
 /// @param p_sandbox The performance sandbox to release.
 /// @return On success 1 is return
-int release_psandbox(PSandbox *p_sandbox);
+int release_psandbox(int pid);
 
 /// @brief Update an event to the performance p_sandbox
 /// @param event The event to notify the performance p_sandbox.
@@ -75,10 +75,10 @@ int release_psandbox(PSandbox *p_sandbox);
 /// @return On success 1 is returned.
 int update_psandbox(unsigned int key, enum enum_event_type event_type);
 
-void active_psandbox(PSandbox *p_sandbox);
-void freeze_psandbox(PSandbox *p_sandbox);
-PSandbox *get_current_psandbox();
-PSandbox *get_psandbox(size_t addr);
+void active_psandbox(int bid);
+void freeze_psandbox(int bid);
+int get_current_psandbox();
+int get_psandbox(size_t addr);
 
 /// The functions are to transfer psandbox ownership between threads
 /// Case A, thread A -> B, A knows B's thread id
@@ -91,8 +91,8 @@ PSandbox *get_psandbox(size_t addr);
 ///   solution, another global struct, B's get pbox by the same event key?
 ///   unmount, iterate first global struct, if no, check the second for the 
 ///   same key
-int unbind_psandbox(size_t addr, PSandbox *p_sandbox);
-PSandbox *bind_psandbox(size_t addr);
+int unbind_psandbox(size_t addr, int sandbox_id);
+int bind_psandbox(size_t addr);
 
 
 

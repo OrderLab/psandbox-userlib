@@ -34,8 +34,8 @@
 
 #define NSEC_PER_SEC 1000000000L
 
-//#define DISABLE_PSANDBOX
-GHashTable *psandbox_map;
+#define DISABLE_PSANDBOX
+//GHashTable *psandbox_map;
 //GHashTable *psandbox_transfer_map;
 
 /* lock for updating the stats variables */
@@ -81,186 +81,159 @@ int psandbox_manager_init() {
   syscall(SYS_START_MANAGER,&stats_lock);
 }
 
-PSandbox *create_psandbox() {
-  struct pSandbox *p_sandbox;
+int create_psandbox() {
+//  struct pSandbox *p_sandbox;
 #ifdef DISABLE_PSANDBOX
-  return NULL;
+  return -1;
 #endif
   long sandbox_id;
-  gint *key = g_new(gint, 1);
+//  gint *key = g_new(gint, 1);
 
-  p_sandbox = (struct pSandbox *) malloc(sizeof(struct pSandbox));
-  if (p_sandbox == NULL) return NULL;
+//  p_sandbox = (struct pSandbox *) malloc(sizeof(struct pSandbox));
+//  if (p_sandbox == NULL) return NULL;
 
   sandbox_id = syscall(SYS_CREATE_PSANDBOX);
 //  sandbox_id = syscall(SYS_gettid);
   if (sandbox_id == -1) {
-    free(p_sandbox);
+//    free(p_sandbox);
     printf("syscall failed with errno: %s\n", strerror(errno));
     return NULL;
   }
 
-  Activity *act = (Activity *) calloc(1, sizeof(Activity));
-  p_sandbox->activity = act;
-  p_sandbox->bid = sandbox_id;
-  p_sandbox->pid = syscall(SYS_gettid);
-  p_sandbox->count = 0;
-  p_sandbox->s_count = 0;
-  p_sandbox->total_time = 0;
-  if (psandbox_map == NULL) {
-    psandbox_map = g_hash_table_new(g_int_hash, g_int_equal);
-  }
+//  Activity *act = (Activity *) calloc(1, sizeof(Activity));
+//  p_sandbox->activity = act;
+//  p_sandbox->bid = sandbox_id;
+//  p_sandbox->pid = syscall(SYS_gettid);
+//  p_sandbox->count = 0;
+//  p_sandbox->s_count = 0;
+//  p_sandbox->total_time = 0;
+//  if (psandbox_map == NULL) {
+//    psandbox_map = g_hash_table_new(g_int_hash, g_int_equal);
+//  }
+//
+//  *key = (int) (sandbox_id);
+//
+//  pthread_mutex_lock(&stats_lock);
+//  g_hash_table_insert(psandbox_map, key, p_sandbox);
+//  pthread_mutex_unlock(&stats_lock);
 
-  *key = (int) (sandbox_id);
-
-  pthread_mutex_lock(&stats_lock);
-  g_hash_table_insert(psandbox_map, key, p_sandbox);
-  pthread_mutex_unlock(&stats_lock);
-
-  return p_sandbox;
+  return sandbox_id;
 }
 
-int release_psandbox(PSandbox *p_sandbox) {
+int release_psandbox(int pid) {
   int success = 0;
   #ifdef DISABLE_PSANDBOX
-  return NULL;
+  return -1;
   #endif
-  gint *key = g_new(gint, 1);
-  *key = (int) p_sandbox->bid;
-  if (!p_sandbox)
+//  gint *key = g_new(gint, 1);
+//  *key = (int) p_sandbox->bid;
+  if (pid != -1)
     return success;
 
-  success = (int) syscall(SYS_RELEASE_PSANDBOX, p_sandbox->pid);
+  success = (int) syscall(SYS_RELEASE_PSANDBOX, pid);
 
   if (success == -1) {
-    free(p_sandbox);
     printf("failed to release sandbox in the kernel: %s\n", strerror(errno));
     return success;
   }
 
-  pthread_mutex_lock(&stats_lock);
-  g_hash_table_remove(psandbox_map, key);
-  pthread_mutex_unlock(&stats_lock);
+//  pthread_mutex_lock(&stats_lock);
+//  g_hash_table_remove(psandbox_map, key);
+//  pthread_mutex_unlock(&stats_lock);
 
-  free(p_sandbox->activity);
-  free(p_sandbox);
-  p_sandbox = NULL;
   return success;
 }
 
-PSandbox *get_current_psandbox() {
+int get_current_psandbox() {
   #ifdef DISABLE_PSANDBOX
-  return NULL;
+  return -1;
   #endif
-  int bid = (int) syscall(SYS_GET_CURRENT_PSANDBOX);
+  int pid = (int) syscall(SYS_GET_CURRENT_PSANDBOX);
 //  int bid = syscall(SYS_gettid);
 
-  gint *key = g_new(gint, 1);
-  (*key) = bid;
-  if (bid == -1)
-    return NULL;
-
-  pthread_mutex_lock(&stats_lock);
-  PSandbox *psandbox = (PSandbox *) g_hash_table_lookup(psandbox_map, key);
-  pthread_mutex_unlock(&stats_lock);
-  if (NULL == psandbox) {
-    printf("Error: Can't get sandbox for the thread %d\n", bid);
-    return NULL;
+  if (pid == -1) {
+    printf("Error: Can't get sandbox %d for the thread %d\n", pid, syscall(SYS_gettid));
+    return -1;
   }
 
-  return psandbox;
+
+//  pthread_mutex_lock(&stats_lock);
+//  PSandbox *psandbox = (PSandbox *) g_hash_table_lookup(psandbox_map, key);
+//  pthread_mutex_unlock(&stats_lock);
+//  if (NULL == psandbox) {
+//    printf("Error: Can't get sandbox %d for the thread %d\n", bid, syscall(SYS_gettid));
+//    return 0;
+//  }
+
+return pid;
 }
 
-PSandbox *get_psandbox(size_t addr) {
+int get_psandbox(size_t addr) {
   #ifdef DISABLE_PSANDBOX
-  return NULL;
+  return -1;
   #endif
   int bid = (int) syscall(SYS_GET_PSANDBOX,addr);
   gint *key = g_new(gint, 1);
   (*key) = bid;
 
-  if (bid == -1)
-    return NULL;
-
-  pthread_mutex_lock(&stats_lock);
-  PSandbox *psandbox = (PSandbox *) g_hash_table_lookup(psandbox_map, key);
-  pthread_mutex_unlock(&stats_lock);
-  if (NULL == psandbox) {
+  if (bid == -1) {
     printf("Error: Can't get sandbox for the id %d\n", bid);
-    return NULL;
-  }
-
-  return psandbox;
-}
-
-int unbind_psandbox(size_t addr, PSandbox *p_sandbox) {
-  #ifdef DISABLE_PSANDBOX
-  return NULL;
-#endif
-  if (!p_sandbox || !p_sandbox->activity) {
     return -1;
   }
 
-//  guint *key = g_new(guint, 1);
-//  (*key) = addr;
-//
-//  if (psandbox_transfer_map == NULL) {
-//    psandbox_transfer_map = g_hash_table_new(g_int_hash, g_int_equal);
+
+//  pthread_mutex_lock(&stats_lock);
+//  PSandbox *psandbox = (PSandbox *) g_hash_table_lookup(psandbox_map, key);
+//  pthread_mutex_unlock(&stats_lock);
+//  if (NULL == psandbox) {
+//    printf("Error: Can't get sandbox for the id %d\n", bid);
+//    return NULL;
 //  }
-//
-//  pthread_mutex_lock(&transfer_lock);
-//  g_hash_table_insert(psandbox_transfer_map, key, p_sandbox);
-//  pthread_mutex_unlock(&transfer_lock);
+
+return bid;
+}
+
+int unbind_psandbox(size_t addr, int bid) {
+  #ifdef DISABLE_PSANDBOX
+  return -1;
+#endif
+  if (bid == -1) {
+    printf("Error: Can't unbind sandbox %d for the thread\n", bid);
+    return -1;
+  }
 
   if(syscall(SYS_UNBIND_PSANDBOX, addr)) {
-    p_sandbox->pid = -1;
     return 0;
   }
-  printf("error: unbind fail for psandbox %d\n", p_sandbox->bid);
+//  printf("error: unbind fail for psandbox %d\n", p_sandbox->bid);
   return -1;
 }
 
 
-PSandbox *bind_psandbox(size_t addr) {
+int bind_psandbox(size_t addr) {
   #ifdef DISABLE_PSANDBOX
-  return NULL;
+  return -1;
 #endif
-  PSandbox *p_sandbox = NULL;
+//  PSandbox *p_sandbox = NULL;
 
-//  guint *key = g_new(guint, 1);
-//  (*key) = addr;
-//  if (psandbox_transfer_map == NULL) {
-//    psandbox_transfer_map = g_hash_table_new(g_int_hash, g_int_equal);
-//  }
+  int bid = (int) syscall(SYS_BIND_PSANDBOX, addr);
+//  gint *key = g_new(gint, 1);
+//  (*key) = bid;
 
-//  pthread_mutex_lock(&transfer_lock);
-//  p_sandbox= (PSandbox *) g_hash_table_lookup(psandbox_transfer_map, key);
-//
-//  pthread_mutex_unlock(&transfer_lock);
+  if (bid == -1) {
+    printf("Error: Can't bind sandbox %d for the thread\n", bid);
+    return -1;
+  }
+
+
+//  pthread_mutex_lock(&stats_lock);
+//  p_sandbox= (PSandbox *) g_hash_table_lookup(psandbox_map, key);
+//  pthread_mutex_unlock(&stats_lock);
 //  if (NULL == p_sandbox) {
-//    printf("Error: Can't bind sandbox %d for the thread\n", syscall(SYS_gettid));
+//    printf("Error: Can't bind sandbox %d for the thread\n", bid);
 //    return NULL;
 //  }
-//  pthread_mutex_lock(&transfer_lock);
-//  g_hash_table_remove(psandbox_transfer_map,key);
-//  pthread_mutex_unlock(&transfer_lock);
-//  p_sandbox->pid =  (int) syscall(SYS_BIND_PSANDBOX, p_sandbox->bid);
-  int bid = (int) syscall(SYS_BIND_PSANDBOX, addr);
-  gint *key = g_new(gint, 1);
-  (*key) = bid;
-
-  if (bid == -1)
-    return NULL;
-
-  pthread_mutex_lock(&stats_lock);
-  p_sandbox= (PSandbox *) g_hash_table_lookup(psandbox_map, key);
-  pthread_mutex_unlock(&stats_lock);
-  if (NULL == p_sandbox) {
-    printf("Error: Can't bind sandbox %d for the thread\n", bid);
-    return NULL;
-  }
-  p_sandbox->pid = syscall(SYS_gettid);
-  return p_sandbox;
+  return bid;
 }
 
 int update_psandbox(unsigned int key, enum enum_event_type event_type) {
@@ -302,9 +275,8 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
   return success;
 }
 
-void active_psandbox(PSandbox *p_sandbox) {
-
-  if (!p_sandbox || !p_sandbox->activity) {
+void active_psandbox(int bid) {
+  if (bid == -1) {
 //    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
     return;
   }
@@ -312,11 +284,10 @@ void active_psandbox(PSandbox *p_sandbox) {
   return ;
 #endif
   syscall(SYS_ACTIVE_PSANDBOX);
-
 }
 
-void freeze_psandbox(PSandbox *p_sandbox) {
-  if (!p_sandbox || !p_sandbox->activity) {
+void freeze_psandbox(int bid) {
+  if (bid == -1) {
 //    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
     return;
   }
