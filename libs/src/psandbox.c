@@ -105,7 +105,7 @@ int release_psandbox(int pid) {
   return -1;
   #endif
 
-  if (pid != -1)
+  if (pid == -1)
     return success;
 
   success = (int) syscall(SYS_RELEASE_PSANDBOX, pid);
@@ -126,7 +126,7 @@ int get_current_psandbox() {
 //  int bid = syscall(SYS_gettid);
 
   if (pid == -1) {
-    printf("Error: Can't get sandbox %d for the thread %d\n", pid, syscall(SYS_gettid));
+//    printf("Error: Can't get sandbox for the thread %d\n",syscall(SYS_gettid));
     return -1;
   }
 
@@ -152,14 +152,14 @@ int unbind_psandbox(size_t addr, int bid) {
   return -1;
 #endif
   if (bid == -1) {
-    printf("Error: Can't unbind sandbox %d for the thread\n", bid);
+    printf("Error: Can't unbind sandbox for the thread %d\n",syscall(SYS_gettid));
     return -1;
   }
 
   if(syscall(SYS_UNBIND_PSANDBOX, addr)) {
     return 0;
   }
-//  printf("error: unbind fail for psandbox %d\n", p_sandbox->bid);
+  printf("error: unbind fail for psandbox %d\n", bid);
   return -1;
 }
 
@@ -172,7 +172,7 @@ int bind_psandbox(size_t addr) {
   int bid = (int) syscall(SYS_BIND_PSANDBOX, addr);
 
   if (bid == -1) {
-    printf("Error: Can't bind sandbox %d for the thread\n", bid);
+    printf("Error: Can't bind address %d for the thread %d\n", addr,syscall(SYS_gettid));
     return -1;
   }
 
