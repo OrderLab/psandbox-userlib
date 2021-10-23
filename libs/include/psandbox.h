@@ -28,6 +28,7 @@ extern "C" {
 #define DBUG_TRACE(A) clock_gettime(CLOCK_REALTIME, A)
 
 enum enum_event_type { PREPARE, ENTER, HOLD, UNHOLD };
+enum enum_isolation_type { ABSOLUTE, RELATIVE, SCALABLE, ISOLATION_DEFAULT};
 
 typedef struct sandboxEvent {
   enum enum_event_type event_type;
@@ -52,7 +53,6 @@ typedef struct pSandbox {
   long pid; // the thread that the perfSandbox is bound
   Activity *activity;
 
-
   // debugging
   int count;
   clock_t total_time;
@@ -60,9 +60,15 @@ typedef struct pSandbox {
   struct timespec every_second_start;
 } PSandbox;
 
+typedef struct isolationRule {
+  enum enum_isolation_type type;
+  int isolation_level;
+  int priority;
+}IsolationRule;
+
 /// @brief Create a performance sandbox
 /// @return The point to the performance sandbox.
-int create_psandbox();
+int create_psandbox(IsolationRule rule);
 
 /// @brief release a performance sandbox
 /// @param p_sandbox The performance sandbox to release.
@@ -75,7 +81,7 @@ int release_psandbox(int pid);
 /// @return On success 1 is returned.
 int update_psandbox(unsigned int key, enum enum_event_type event_type);
 
-void active_psandbox(int bid);
+void activate_psandbox(int bid);
 void freeze_psandbox(int bid);
 int get_current_psandbox();
 int get_psandbox(size_t addr);
@@ -94,13 +100,8 @@ int get_psandbox(size_t addr);
 int unbind_psandbox(size_t addr, int sandbox_id);
 int bind_psandbox(size_t addr);
 
-
-
 int psandbox_manager_init();
 
-int track_mutex(struct sandboxEvent *event, PSandbox *p_sandbox);
-
-int track_time(struct sandboxEvent *event, PSandbox *p_sandbox);
 void print_all();
 
 #ifdef __cplusplus

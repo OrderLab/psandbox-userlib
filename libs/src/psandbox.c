@@ -25,7 +25,7 @@
 #define SYS_GET_CURRENT_PSANDBOX 438
 #define SYS_GET_PSANDBOX 439
 #define SYS_START_MANAGER 442
-#define SYS_ACTIVE_PSANDBOX 443
+#define SYS_ACTIVATE_PSANDBOX 443
 #define SYS_FREEZE_PSANDBOX 444
 #define SYS_UPDATE_EVENT 445
 #define SYS_UNBIND_PSANDBOX 446
@@ -35,8 +35,11 @@
 #define NSEC_PER_SEC 1000000000L
 
 #define DISABLE_PSANDBOX
-//GHashTable *psandbox_map;
-//GHashTable *psandbox_transfer_map;
+
+
+#define HIGHEST_PRIORITY 2
+#define MID_PRIORITY 1
+#define LOW_PRIORITY 0
 
 /* lock for updating the stats variables */
 pthread_mutex_t stats_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -81,14 +84,18 @@ int psandbox_manager_init() {
   syscall(SYS_START_MANAGER,&stats_lock);
 }
 
-int create_psandbox() {
-
+int create_psandbox(IsolationRule rule) {
 #ifdef DISABLE_PSANDBOX
   return -1;
 #endif
   long sandbox_id;
+  if(rule.type == ISOLATION_DEFAULT) {
+    rule.type = SCALABLE;
+    rule.isolation_level = 100;
+    rule.priority = LOW_PRIORITY;
+  }
 
-  sandbox_id = syscall(SYS_CREATE_PSANDBOX);
+  sandbox_id = syscall(SYS_CREATE_PSANDBOX,rule);
 //  sandbox_id = syscall(SYS_gettid);
   if (sandbox_id == -1) {
 
@@ -213,7 +220,7 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
   return success;
 }
 
-void active_psandbox(int bid) {
+void activate_psandbox(int bid) {
   if (bid == -1) {
 //    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
     return;
@@ -221,7 +228,7 @@ void active_psandbox(int bid) {
 #ifdef DISABLE_PSANDBOX
   return ;
 #endif
-  syscall(SYS_ACTIVE_PSANDBOX);
+  syscall(SYS_ACTIVATE_PSANDBOX);
 }
 
 void freeze_psandbox(int bid) {
