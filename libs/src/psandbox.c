@@ -19,6 +19,7 @@
 #include <sys/time.h>
 #include "syscall.h"
 #include <signal.h>
+#include "hashmap.h"
 
 #define SYS_CREATE_PSANDBOX    436
 #define SYS_RELEASE_PSANDBOX 437
@@ -31,15 +32,12 @@
 #define SYS_UNBIND_PSANDBOX 446
 #define SYS_BIND_PSANDBOX 447
 
+static __thread int psandbox_id;
 
 #define NSEC_PER_SEC 1000000000L
 
-#define DISABLE_PSANDBOX
-
-
-#define HIGHEST_PRIORITY 2
-#define MID_PRIORITY 1
-#define LOW_PRIORITY 0
+//#define DISABLE_PSANDBOX
+struct hashmap_s  *psandbox_map = NULL;
 
 /* lock for updating the stats variables */
 pthread_mutex_t stats_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -88,25 +86,41 @@ int create_psandbox(IsolationRule rule) {
 #ifdef DISABLE_PSANDBOX
   return -1;
 #endif
-  long sandbox_id;
+  long bid;
+  PSandbox *p_sandbox;
+
   if(rule.type == ISOLATION_DEFAULT) {
     rule.type = SCALABLE;
     rule.isolation_level = 100;
     rule.priority = LOW_PRIORITY;
   }
 
-  sandbox_id = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
-//  sandbox_id = syscall(SYS_gettid);
-  if (sandbox_id == -1) {
+  bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
+//  bid = syscall(SYS_gettid);
+  if (bid == -1) {
     printf("syscall failed with errno: %s\n", strerror(errno));
     return NULL;
   }
 
-  return sandbox_id;
+  if (psandbox_map == NULL) {
+    psandbox_map = (struct hashmap_s *)malloc(sizeof(struct hashmap_s));
+    hashmap_create(32, psandbox_map);
+  }
+
+  psandbox_id = bid;
+  p_sandbox = (struct pSandbox *) malloc(sizeof(struct pSandbox));
+  p_sandbox->pid = bid;
+
+  pthread_mutex_lock(&stats_lock);
+  hashmap_put(psandbox_map, bid, p_sandbox,0);
+  printf("create psandbox %d\n",psandbox_id);
+  pthread_mutex_unlock(&stats_lock);
+  return bid;
 }
 
 int release_psandbox(int pid) {
   int success = 0;
+  gint *key = g_new(gint, 1);
   #ifdef DISABLE_PSANDBOX
   return -1;
   #endif
@@ -120,7 +134,8 @@ int release_psandbox(int pid) {
     printf("failed to release sandbox in the kernel: %s\n", strerror(errno));
     return success;
   }
-
+  hashmap_remove(psandbox_map, pid);
+  psandbox_id = 0;
   return success;
 }
 
@@ -129,6 +144,7 @@ int get_current_psandbox() {
   return -1;
   #endif
   int pid = (int) syscall(SYS_GET_CURRENT_PSANDBOX);
+
 //  int bid = syscall(SYS_gettid);
 
   if (pid == -1) {
@@ -163,12 +179,12 @@ int unbind_psandbox(size_t addr, int bid) {
   }
 
   if(syscall(SYS_UNBIND_PSANDBOX, addr)) {
+    psandbox_id = 0;
     return 0;
   }
   printf("error: unbind fail for psandbox %d\n", bid);
   return -1;
 }
-
 
 int bind_psandbox(size_t addr) {
   #ifdef DISABLE_PSANDBOX
@@ -181,15 +197,15 @@ int bind_psandbox(size_t addr) {
     printf("Error: Can't bind address %d for the thread %d\n", addr,syscall(SYS_gettid));
     return -1;
   }
-
+  psandbox_id = bid;
   return bid;
 }
 
 int update_psandbox(unsigned int key, enum enum_event_type event_type) {
   int success = 0;
   BoxEvent event;
-
-
+  GList* holders = NULL;
+  PSandbox *psandbox;
 #ifdef DISABLE_PSANDBOX
   return 1;
 #endif
@@ -202,7 +218,46 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
 #endif
   event.key = key;
   event.event_type = event_type;
-  syscall(SYS_UPDATE_EVENT,&event);
+  if(psandbox_id == 0)
+    return -1;
+  switch (event_type) {
+    case HOLD: {
+
+      int i;
+      psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+
+      for (i = 0; i < HOLDER_SIZE ; ++i) {
+        if (psandbox->holders[i] == 0) {
+          psandbox->holders[i] = key;
+          break;
+        }
+      }
+
+      if (i == HOLDER_SIZE){
+        printf("can't create holder with malloc by psandbox %ld\n",psandbox->pid);
+      }
+
+      break;
+    }
+    case UNHOLD: {
+      int i;
+      psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+      for (i = 0; i < HOLDER_SIZE ; ++i) {
+        if (psandbox->holders[i] == key) {
+          psandbox->holders[i] = 0;
+//          syscall(SYS_UPDATE_EVENT,&event);
+          break;
+        }
+      }
+
+
+      break;
+    }
+    default:
+//      syscall(SYS_UPDATE_EVENT,&event);
+      break;
+  }
+
 #ifdef TRACE_DEBUG
   DBUG_TRACE(&stop);
   long time = time2ns(timeDiff(start,stop));
@@ -238,6 +293,10 @@ void freeze_psandbox(int bid) {
 #endif
   syscall(SYS_FREEZE_PSANDBOX);
 }
+
+//int get_bid(){
+//  return bid;
+//}
 
 //void print_all(){
 //  int counts[1000],small_counts[10];

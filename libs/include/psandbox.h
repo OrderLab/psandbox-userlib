@@ -16,16 +16,18 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <unistd.h>
+#include "hashmap.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#define HOLDER_SIZE 1000
+#define DBUG_TRACE(A) clock_gettime(CLOCK_REALTIME, A)
+
 #define HIGHEST_PRIORITY 2
 #define MID_PRIORITY 1
 #define LOW_PRIORITY 0
-
-#define DBUG_TRACE(A) clock_gettime(CLOCK_REALTIME, A)
 
 enum enum_event_type { PREPARE, ENTER, HOLD, UNHOLD };
 enum enum_isolation_type { ABSOLUTE, RELATIVE, SCALABLE, ISOLATION_DEFAULT};
@@ -48,17 +50,16 @@ typedef struct activity {
   unsigned int key;
 } Activity;
 
+typedef struct pSandbox PSandbox;
+
+
 typedef struct pSandbox {
   long bid;  // sandbox id used by syscalls
   long pid; // the thread that the perfSandbox is bound
   Activity *activity;
 
-  // debugging
-  int count;
-  clock_t total_time;
-  int s_count;
-  struct timespec every_second_start;
-} PSandbox;
+  unsigned int holders[HOLDER_SIZE];
+};
 
 typedef struct isolationRule {
   enum enum_isolation_type type;
