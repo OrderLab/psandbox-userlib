@@ -95,10 +95,9 @@ int create_psandbox(IsolationRule rule) {
     rule.priority = LOW_PRIORITY;
   }
 
-  sandbox_id = syscall(SYS_CREATE_PSANDBOX,rule);
+  sandbox_id = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
 //  sandbox_id = syscall(SYS_gettid);
   if (sandbox_id == -1) {
-
     printf("syscall failed with errno: %s\n", strerror(errno));
     return NULL;
   }
@@ -194,11 +193,11 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
 #ifdef DISABLE_PSANDBOX
   return 1;
 #endif
-
-#ifdef TRACE_DEBUG
+  #ifdef TRACE_DEBUG
   struct timespec  start, stop;
-
-  DBUG_TRACE(&p_sandbox->every_second_start);
+  static struct timespec every_second_start;
+  static long total_time = 0;
+  static int count = 0;
   DBUG_TRACE(&start);
 #endif
   event.key = key;
@@ -207,16 +206,14 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
 #ifdef TRACE_DEBUG
   DBUG_TRACE(&stop);
   long time = time2ns(timeDiff(start,stop));
-  long s_time = time2ns(timeDiff(p_sandbox->every_second_start,stop));
-  p_sandbox->total_time = p_sandbox->total_time + time;
-  p_sandbox->count++;
-  p_sandbox->s_count++;
-  if((double )(s_time)/1000000000 > 3) {
-    printf("tps %d, psandbox %d\n",p_sandbox->s_count, p_sandbox->bid);
-    p_sandbox->s_count = 0;
-    clock_gettime(CLOCK_REALTIME,&p_sandbox->every_second_start);
+  total_time += time;
+  count++;
+  if(count % 1000000 == 0) {
+    printf("update call 1000000 times average time %luns\n", total_time/count);
   }
 #endif
+
+
   return success;
 }
 
