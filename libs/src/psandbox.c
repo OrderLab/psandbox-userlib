@@ -31,6 +31,7 @@
 #define SYS_UPDATE_EVENT 445
 #define SYS_UNBIND_PSANDBOX 446
 #define SYS_BIND_PSANDBOX 447
+#define SYS_PENALIZE_EVENT 448
 
 static __thread int psandbox_id;
 
@@ -201,8 +202,21 @@ int bind_psandbox(size_t addr) {
   return bid;
 }
 
-int update_psandbox(unsigned int key, enum enum_event_type event_type) {
-  int success = 0;
+int find_holder(unsigned int key) {
+  PSandbox *psandbox;
+  int i;
+  psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+  for (i = 0; i < HOLDER_SIZE ; ++i) {
+    if (psandbox->holders[i] == key) {
+      return i;
+    }
+  }
+  return -1;
+}
+
+
+long int do_update_psandbox(unsigned int key, enum enum_event_type event_type, int is_lazy) {
+  long int success = 0;
   BoxEvent event;
   GList* holders = NULL;
   PSandbox *psandbox;
@@ -222,10 +236,8 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
     return -1;
   switch (event_type) {
     case HOLD: {
-
       int i;
       psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
-
       for (i = 0; i < HOLDER_SIZE ; ++i) {
         if (psandbox->holders[i] == 0) {
           psandbox->holders[i] = key;
@@ -245,16 +257,13 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
       for (i = 0; i < HOLDER_SIZE ; ++i) {
         if (psandbox->holders[i] == key) {
           psandbox->holders[i] = 0;
-//          syscall(SYS_UPDATE_EVENT,&event);
-          break;
+          success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
         }
       }
-
-
       break;
     }
     default:
-//      syscall(SYS_UPDATE_EVENT,&event);
+      syscall(SYS_UPDATE_EVENT,&event);
       break;
   }
 
@@ -272,6 +281,12 @@ int update_psandbox(unsigned int key, enum enum_event_type event_type) {
   return success;
 }
 
+void penalize_psandbox(long int penalty) {
+  if(penalty > 1000) {
+    syscall(SYS_PENALIZE_EVENT,penalty);
+  }
+}
+
 void activate_psandbox(int bid) {
   if (bid == -1) {
 //    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
@@ -280,7 +295,7 @@ void activate_psandbox(int bid) {
 #ifdef DISABLE_PSANDBOX
   return ;
 #endif
-  syscall(SYS_ACTIVATE_PSANDBOX);
+//  syscall(SYS_ACTIVATE_PSANDBOX);
 }
 
 void freeze_psandbox(int bid) {

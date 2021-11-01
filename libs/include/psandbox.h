@@ -80,12 +80,22 @@ int release_psandbox(int pid);
 /// @param event The event to notify the performance p_sandbox.
 /// @param p_sandbox The p_sandbox to notify
 /// @return On success 1 is returned.
-int update_psandbox(unsigned int key, enum enum_event_type event_type);
+long int do_update_psandbox(unsigned int key, enum enum_event_type event_type, int is_lazy);
+
+/// @brief Update an event to the performance p_sandbox
+/// @param event The event to notify the performance p_sandbox.
+/// @param p_sandbox The p_sandbox to notify
+/// @return On success 1 is returned.
+inline long int update_psandbox(unsigned int key, enum enum_event_type event_type) {
+  return do_update_psandbox(key,event_type,false);
+}
 
 void activate_psandbox(int bid);
 void freeze_psandbox(int bid);
 int get_current_psandbox();
 int get_psandbox(size_t addr);
+int find_holder(unsigned int key);
+void penalize_psandbox(long int penalty);
 
 /// The functions are to transfer psandbox ownership between threads
 /// Case A, thread A -> B, A knows B's thread id
