@@ -29,7 +29,7 @@ extern "C" {
 #define MID_PRIORITY 1
 #define LOW_PRIORITY 0
 
-enum enum_event_type { PREPARE, ENTER, HOLD, UNHOLD };
+enum enum_event_type { PREPARE, ENTER, HOLD, UNHOLD, COND_WAKE };
 enum enum_isolation_type { ABSOLUTE, RELATIVE, SCALABLE, ISOLATION_DEFAULT};
 
 typedef struct sandboxEvent {
@@ -95,7 +95,7 @@ void freeze_psandbox(int bid);
 int get_current_psandbox();
 int get_psandbox(size_t addr);
 int find_holder(unsigned int key);
-void penalize_psandbox(long int penalty);
+void penalize_psandbox(long int penalty,unsigned int key);
 
 /// The functions are to transfer psandbox ownership between threads
 /// Case A, thread A -> B, A knows B's thread id

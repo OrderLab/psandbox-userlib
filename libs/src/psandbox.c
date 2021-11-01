@@ -114,7 +114,7 @@ int create_psandbox(IsolationRule rule) {
 
   pthread_mutex_lock(&stats_lock);
   hashmap_put(psandbox_map, bid, p_sandbox,0);
-  printf("create psandbox %d\n",psandbox_id);
+//  printf("create psandbox %d\n",psandbox_id);
   pthread_mutex_unlock(&stats_lock);
   return bid;
 }
@@ -262,6 +262,11 @@ long int do_update_psandbox(unsigned int key, enum enum_event_type event_type, i
       }
       break;
     }
+    case COND_WAKE: {
+      event.event_type = UNHOLD;
+      success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
+    }
+
     default:
       syscall(SYS_UPDATE_EVENT,&event);
       break;
@@ -281,9 +286,9 @@ long int do_update_psandbox(unsigned int key, enum enum_event_type event_type, i
   return success;
 }
 
-void penalize_psandbox(long int penalty) {
+void penalize_psandbox(long int penalty, unsigned int key) {
   if(penalty > 1000) {
-    syscall(SYS_PENALIZE_EVENT,penalty);
+    syscall(SYS_PENALIZE_EVENT,penalty,key);
   }
 }
 
@@ -295,7 +300,7 @@ void activate_psandbox(int bid) {
 #ifdef DISABLE_PSANDBOX
   return ;
 #endif
-//  syscall(SYS_ACTIVATE_PSANDBOX);
+  syscall(SYS_ACTIVATE_PSANDBOX);
 }
 
 void freeze_psandbox(int bid) {
