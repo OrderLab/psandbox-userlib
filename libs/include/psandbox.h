@@ -81,22 +81,22 @@ int release_psandbox(int pid);
 /// @param event The event to notify the performance p_sandbox.
 /// @param p_sandbox The p_sandbox to notify
 /// @return On success 1 is returned.
-long int do_update_psandbox(unsigned int key, enum enum_event_type event_type, int is_lazy);
+long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_lazy);
 
 /// @brief Update an event to the performance p_sandbox
 /// @param event The event to notify the performance p_sandbox.
 /// @param p_sandbox The p_sandbox to notify
 /// @return On success 1 is returned.
-inline long int update_psandbox(unsigned int key, enum enum_event_type event_type) {
+inline long int update_psandbox(size_t key, enum enum_event_type event_type) {
   return do_update_psandbox(key,event_type,false);
 }
 
-void activate_psandbox(int bid);
-void freeze_psandbox(int bid);
+void activate_psandbox(int pid);
+void freeze_psandbox(int pid);
 int get_current_psandbox();
-int get_psandbox(size_t addr);
-int find_holder(unsigned int key);
-void penalize_psandbox(long int penalty,unsigned int key);
+int get_psandbox(size_t key);
+int find_holder(size_t key);
+void penalize_psandbox(long int penalty,size_t key);
 
 /// The functions are to transfer psandbox ownership between threads
 /// Case A, thread A -> B, A knows B's thread id
@@ -109,8 +109,8 @@ void penalize_psandbox(long int penalty,unsigned int key);
 ///   solution, another global struct, B's get pbox by the same event key?
 ///   unmount, iterate first global struct, if no, check the second for the 
 ///   same key
-int unbind_psandbox(size_t addr, int sandbox_id);
-int bind_psandbox(size_t addr);
+int unbind_psandbox(size_t key, int pid);
+int bind_psandbox(size_t key);
 
 int psandbox_manager_init();
 

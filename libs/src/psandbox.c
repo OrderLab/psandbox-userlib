@@ -156,11 +156,11 @@ int get_current_psandbox() {
   return pid;
 }
 
-int get_psandbox(size_t addr) {
+int get_psandbox(size_t key) {
   #ifdef DISABLE_PSANDBOX
   return -1;
   #endif
-  int pid = (int) syscall(SYS_GET_PSANDBOX, addr);
+  int pid = (int) syscall(SYS_GET_PSANDBOX, key);
 
   if (pid == -1) {
     printf("Error: Can't get sandbox for the id %d\n", pid);
@@ -170,32 +170,32 @@ int get_psandbox(size_t addr) {
   return pid;
 }
 
-int unbind_psandbox(size_t addr, int bid) {
+int unbind_psandbox(size_t key, int pid) {
 #ifdef DISABLE_PSANDBOX
   return -1;
 #endif
-  if (bid == -1) {
+  if (pid == -1) {
     printf("Error: Can't unbind sandbox for the thread %d\n",syscall(SYS_gettid));
     return -1;
   }
 
-  if(syscall(SYS_UNBIND_PSANDBOX, addr)) {
+  if(syscall(SYS_UNBIND_PSANDBOX, key)) {
     psandbox_id = 0;
     return 0;
   }
-  printf("error: unbind fail for psandbox %d\n", bid);
+  printf("error: unbind fail for psandbox %d\n", pid);
   return -1;
 }
 
-int bind_psandbox(size_t addr) {
+int bind_psandbox(size_t key) {
   #ifdef DISABLE_PSANDBOX
   return -1;
 #endif
 
-  int bid = (int) syscall(SYS_BIND_PSANDBOX, addr);
+  int bid = (int) syscall(SYS_BIND_PSANDBOX, key);
 
   if (bid == -1) {
-    printf("Error: Can't bind address %d for the thread %d\n", addr,syscall(SYS_gettid));
+    printf("Error: Can't bind address %d for the thread %d\n", key, syscall(SYS_gettid));
     return -1;
   }
   psandbox_id = bid;
@@ -295,9 +295,9 @@ void penalize_psandbox(long int penalty, unsigned int key) {
   }
 }
 
-void activate_psandbox(int bid) {
-  if (bid == -1) {
-//    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
+void activate_psandbox(int pid) {
+  if (pid == -1) {
+//    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->pid, p_sandbox->activity);
     return;
   }
 #ifdef DISABLE_PSANDBOX
@@ -306,9 +306,9 @@ void activate_psandbox(int bid) {
   syscall(SYS_ACTIVATE_PSANDBOX);
 }
 
-void freeze_psandbox(int bid) {
-  if (bid == -1) {
-//    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->bid, p_sandbox->activity);
+void freeze_psandbox(int pid) {
+  if (pid == -1) {
+//    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->pid, p_sandbox->activity);
     return;
   }
 #ifdef DISABLE_PSANDBOX
