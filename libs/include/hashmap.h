@@ -140,8 +140,7 @@ hashmap_num_entries(const struct hashmap_s *const hashmap) HASHMAP_USED;
 /// @param hashmap The hashmap to destroy.
 static void hashmap_destroy(struct hashmap_s *const hashmap) HASHMAP_USED;
 
-static unsigned hashmap_crc32_helper(const char *const s,
-                                     const unsigned len) HASHMAP_USED;
+
 static unsigned hashmap_hash_helper_int_helper(const struct hashmap_s *const m,unsigned key) HASHMAP_USED;
 static int hashmap_match_helper(const struct hashmap_element_s *const element, unsigned key) HASHMAP_USED;
 static int hashmap_hash_helper(const struct hashmap_s *const m,unsigned key,
@@ -151,10 +150,10 @@ hashmap_rehash_iterator(void *const new_hash,
                         struct hashmap_element_s *const e) HASHMAP_USED;
 static int hashmap_rehash_helper(struct hashmap_s *const m) HASHMAP_USED;
 
-static void hashmap_clear(struct hashmap_s *const m);
-#if defined(__cplusplus)
-}
-#endif
+//static void hashmap_clear(struct hashmap_s *const m);
+//#if defined(__cplusplus)
+//}
+//#endif
 
 #if defined(__cplusplus)
 #define HASHMAP_CAST(type, x) static_cast<type>(x)
@@ -302,17 +301,17 @@ void hashmap_destroy(struct hashmap_s *const m) {
   memset(m, 0, sizeof(struct hashmap_s));
 }
 
-void hashmap_clear(struct hashmap_s *const m){
-  free(m->data);
-  m->data =
-      HASHMAP_CAST(struct hashmap_element_s *,
-                   calloc(m->table_size, sizeof(struct hashmap_element_s)));
-  if (!m->data) {
-    return;
-  }
-  m->size = 0;
-  return ;
-}
+//void hashmap_clear(struct hashmap_s *const m){
+//  free(m->data);
+//  m->data =
+//      HASHMAP_CAST(struct hashmap_element_s *,
+//                   calloc(m->table_size, sizeof(struct hashmap_element_s)));
+//  if (!m->data) {
+//    return;
+//  }
+//  m->size = 0;
+//  return ;
+//}
 
 unsigned hashmap_num_entries(const struct hashmap_s *const m) {
   return m->size;

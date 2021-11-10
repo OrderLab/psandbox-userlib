@@ -241,6 +241,7 @@ long int do_update_psandbox(unsigned int key, enum enum_event_type event_type, i
       for (i = 0; i < HOLDER_SIZE ; ++i) {
         if (psandbox->holders[i] == 0) {
           psandbox->holders[i] = key;
+          psandbox->hold_resource++;
           break;
         }
       }
@@ -253,11 +254,14 @@ long int do_update_psandbox(unsigned int key, enum enum_event_type event_type, i
     }
     case UNHOLD: {
       int i;
+
       psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
       for (i = 0; i < HOLDER_SIZE ; ++i) {
         if (psandbox->holders[i] == key) {
           psandbox->holders[i] = 0;
-          success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
+          psandbox->hold_resource--;
+          if (psandbox->hold_resource == 0)
+            success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
         }
       }
       break;
@@ -266,7 +270,6 @@ long int do_update_psandbox(unsigned int key, enum enum_event_type event_type, i
       event.event_type = UNHOLD;
       success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
     }
-
     default:
       syscall(SYS_UPDATE_EVENT,&event);
       break;

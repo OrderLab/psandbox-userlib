@@ -59,7 +59,8 @@ typedef struct pSandbox {
   Activity *activity;
 
   unsigned int holders[HOLDER_SIZE];
-};
+  int hold_resource;
+}PSandbox;
 
 typedef struct isolationRule {
   enum enum_isolation_type type;
