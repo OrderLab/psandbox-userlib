@@ -202,7 +202,7 @@ int bind_psandbox(size_t key) {
   return bid;
 }
 
-int find_holder(unsigned int key) {
+int find_holder(size_t key) {
   PSandbox *psandbox;
   int i;
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
@@ -215,7 +215,7 @@ int find_holder(unsigned int key) {
 }
 
 
-long int do_update_psandbox(unsigned int key, enum enum_event_type event_type, int is_lazy) {
+long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_lazy) {
   long int success = 0;
   BoxEvent event;
   GList* holders = NULL;
@@ -289,7 +289,7 @@ long int do_update_psandbox(unsigned int key, enum enum_event_type event_type, i
   return success;
 }
 
-void penalize_psandbox(long int penalty, unsigned int key) {
+void penalize_psandbox(long int penalty, size_t key) {
   if(penalty > 1000) {
     syscall(SYS_PENALIZE_EVENT,penalty,key);
   }
