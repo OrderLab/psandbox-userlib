@@ -80,7 +80,7 @@ static inline long time2ns(Time t1) {
 }
 
 int psandbox_manager_init() {
-  syscall(SYS_START_MANAGER,&stats_lock);
+  return syscall(SYS_START_MANAGER,&stats_lock);
 }
 
 int create_psandbox(IsolationRule rule) {
@@ -100,7 +100,7 @@ int create_psandbox(IsolationRule rule) {
 //  bid = syscall(SYS_gettid);
   if (bid == -1) {
     printf("syscall failed with errno: %s\n", strerror(errno));
-    return NULL;
+    return -1;
   }
 
   if (psandbox_map == NULL) {
@@ -121,7 +121,7 @@ int create_psandbox(IsolationRule rule) {
 
 int release_psandbox(int pid) {
   int success = 0;
-  gint *key = g_new(gint, 1);
+
   #ifdef DISABLE_PSANDBOX
   return -1;
   #endif
@@ -175,7 +175,7 @@ int unbind_psandbox(size_t key, int pid) {
   return -1;
 #endif
   if (pid == -1) {
-    printf("Error: Can't unbind sandbox for the thread %d\n",syscall(SYS_gettid));
+    printf("Error: Can't unbind sandbox for the thread %ld\n",syscall(SYS_gettid));
     return -1;
   }
 
@@ -195,7 +195,7 @@ int bind_psandbox(size_t key) {
   int bid = (int) syscall(SYS_BIND_PSANDBOX, key);
 
   if (bid == -1) {
-    printf("Error: Can't bind address %d for the thread %d\n", key, syscall(SYS_gettid));
+    printf("Error: Can't bind address %ld for the thread %ld\n", key, syscall(SYS_gettid));
     return -1;
   }
   psandbox_id = bid;
@@ -218,7 +218,7 @@ int find_holder(size_t key) {
 long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_lazy) {
   long int success = 0;
   BoxEvent event;
-  GList* holders = NULL;
+
   PSandbox *psandbox;
 #ifdef DISABLE_PSANDBOX
   return 1;
@@ -269,9 +269,10 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
     case COND_WAKE: {
       event.event_type = UNHOLD;
       success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
+      break;
     }
     default:
-      syscall(SYS_UPDATE_EVENT,&event);
+      success = syscall(SYS_UPDATE_EVENT,&event);
       break;
   }
 
