@@ -170,7 +170,7 @@ int get_psandbox(size_t key) {
   return pid;
 }
 
-int unbind_psandbox(size_t key, int pid) {
+int unbind_psandbox(size_t key, int pid, bool isLazy) {
 #ifdef DISABLE_PSANDBOX
   return -1;
 #endif
@@ -179,7 +179,7 @@ int unbind_psandbox(size_t key, int pid) {
     return -1;
   }
 
-  if(syscall(SYS_UNBIND_PSANDBOX, key)) {
+  if(syscall(SYS_UNBIND_PSANDBOX, key, isLazy)) {
     psandbox_id = 0;
     return 0;
   }
