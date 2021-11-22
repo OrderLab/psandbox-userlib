@@ -109,7 +109,7 @@ int create_psandbox(IsolationRule rule) {
   }
 
   psandbox_id = bid;
-  p_sandbox = (struct pSandbox *) malloc(sizeof(struct pSandbox));
+  p_sandbox = (struct pSandbox *) calloc(sizeof(struct pSandbox),1);
   p_sandbox->pid = bid;
 
   pthread_mutex_lock(&stats_lock);
@@ -232,8 +232,11 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
 #endif
   event.key = key;
   event.event_type = event_type;
-  if(psandbox_id == 0)
+  if(psandbox_id == 0) {
+    printf("no psandbox id\n");
     return -1;
+  }
+
   switch (event_type) {
     case HOLD: {
       int i;
@@ -242,6 +245,8 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
         if (psandbox->holders[i] == 0) {
           psandbox->holders[i] = key;
           psandbox->hold_resource++;
+          break;
+        } else if (psandbox->holders[i] == key){
           break;
         }
       }

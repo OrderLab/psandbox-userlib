@@ -47,7 +47,6 @@ typedef struct activity {
                     // the pool when you need to use it.
   int is_preempted;
   int queue_event;
-  unsigned int key;
 } Activity;
 
 typedef struct pSandbox PSandbox;
@@ -58,7 +57,7 @@ typedef struct pSandbox {
   long pid; // the thread that the perfSandbox is bound
   Activity *activity;
 
-  unsigned int holders[HOLDER_SIZE];
+  size_t holders[HOLDER_SIZE];
   int hold_resource;
 }PSandbox;
 
