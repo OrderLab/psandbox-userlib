@@ -35,49 +35,12 @@
 
 static __thread int psandbox_id;
 
-#define NSEC_PER_SEC 1000000000L
-
 //#define DISABLE_PSANDBOX
 struct hashmap_s  *psandbox_map = NULL;
 
 /* lock for updating the stats variables */
 pthread_mutex_t stats_lock = PTHREAD_MUTEX_INITIALIZER;
 //pthread_mutex_t transfer_lock = PTHREAD_MUTEX_INITIALIZER;
-typedef struct timespec Time;
-
-static inline Time timeAdd(Time t1, Time t2) {
-  long sec = t2.tv_sec + t1.tv_sec;
-  long nsec = t2.tv_nsec + t1.tv_nsec;
-  if (nsec >= NSEC_PER_SEC) {
-    nsec -= NSEC_PER_SEC;
-    sec++;
-  }
-  return (Time) {.tv_sec = sec, .tv_nsec = nsec};
-}
-
-static inline Time timeDiff(Time start, Time stop) {
-  struct timespec result;
-  if ((stop.tv_nsec - start.tv_nsec) < 0) {
-    result.tv_sec = stop.tv_sec - start.tv_sec - 1;
-    result.tv_nsec = stop.tv_nsec - start.tv_nsec + 1000000000;
-  } else {
-    result.tv_sec = stop.tv_sec - start.tv_sec;
-    result.tv_nsec = stop.tv_nsec - start.tv_nsec;
-  }
-
-  return result;
-}
-
-static inline void Defertime(PSandbox *p_sandbox) {
-  struct timespec current_tm, defer_tm;
-  clock_gettime(CLOCK_REALTIME, &current_tm);
-  defer_tm = timeDiff(p_sandbox->activity->delaying_start, current_tm);
-  p_sandbox->activity->defer_time = timeAdd(defer_tm, p_sandbox->activity->defer_time);
-}
-
-static inline long time2ns(Time t1) {
-  return t1.tv_sec * 1000000000L + t1.tv_nsec;
-}
 
 int psandbox_manager_init() {
   return syscall(SYS_START_MANAGER,&stats_lock);

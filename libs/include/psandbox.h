@@ -16,7 +16,7 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "hashmap.h"
+
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +24,7 @@ extern "C" {
 
 #define HOLDER_SIZE 1000
 #define DBUG_TRACE(A) clock_gettime(CLOCK_REALTIME, A)
+#define NSEC_PER_SEC 1000000000L
 
 #define HIGHEST_PRIORITY 2
 #define MID_PRIORITY 1
@@ -114,6 +115,43 @@ int bind_psandbox(size_t key);
 int psandbox_manager_init();
 
 void print_all();
+
+
+typedef struct timespec Time;
+
+static inline Time timeAdd(Time t1, Time t2) {
+  long sec = t2.tv_sec + t1.tv_sec;
+  long nsec = t2.tv_nsec + t1.tv_nsec;
+  if (nsec >= NSEC_PER_SEC) {
+    nsec -= NSEC_PER_SEC;
+    sec++;
+  }
+  return (Time) {.tv_sec = sec, .tv_nsec = nsec};
+}
+
+static inline Time timeDiff(Time start, Time stop) {
+  struct timespec result;
+  if ((stop.tv_nsec - start.tv_nsec) < 0) {
+    result.tv_sec = stop.tv_sec - start.tv_sec - 1;
+    result.tv_nsec = stop.tv_nsec - start.tv_nsec + 1000000000;
+  } else {
+    result.tv_sec = stop.tv_sec - start.tv_sec;
+    result.tv_nsec = stop.tv_nsec - start.tv_nsec;
+  }
+
+  return result;
+}
+
+static inline void Defertime(PSandbox *p_sandbox) {
+  struct timespec current_tm, defer_tm;
+  clock_gettime(CLOCK_REALTIME, &current_tm);
+  defer_tm = timeDiff(p_sandbox->activity->delaying_start, current_tm);
+  p_sandbox->activity->defer_time = timeAdd(defer_tm, p_sandbox->activity->defer_time);
+}
+
+static inline long time2ns(Time t1) {
+  return t1.tv_sec * 1000000000L + t1.tv_nsec;
+}
 
 #ifdef __cplusplus
 }

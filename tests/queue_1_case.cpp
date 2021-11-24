@@ -16,7 +16,7 @@
 #include <string.h>
 #include "../libs/include/psandbox.h"
 
-#define NUM_THREADS  1
+#define NUMBER  1
 # define os_atomic_increment(ptr, amount) \
 	__sync_add_and_fetch(ptr, amount)
 
@@ -59,19 +59,19 @@ void* do_handle_one_connection(void* arg) {
 }
 
 void create_new_thread(){
-  pthread_t threads[NUM_THREADS];
-  int arg[NUM_THREADS];
+  pthread_t threads[NUMBER];
+  int arg[NUMBER];
   int i;
   pthread_mutex_init(&mutex, NULL);
 
-  for(i = 0; i<NUM_THREADS;i++) {
+  for(i = 0; i<NUMBER; i++) {
     arg[i] = i;
   }
-  for (i = 0; i < NUM_THREADS; i++) {
+  for (i = 0; i < NUMBER; i++) {
     pthread_create (&threads[i], NULL, do_handle_one_connection, &arg[i]);
   }
 
-  for (i = 0; i < NUM_THREADS; i++)
+  for (i = 0; i < NUMBER; i++)
   {
     pthread_join (threads[i], NULL);
   }
