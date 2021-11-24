@@ -12,31 +12,30 @@
 #include <pthread.h>
 #include "psandbox.h"
 
-#define NUMBER  10000
+#define NUMBER  1000
 
 int main() {
   int i;
   int ids[NUMBER];
 
   struct timespec  start, stop;
-  static struct timespec every_second_start;
-  static long total_time = 0;
-  DBUG_TRACE(&start);
+  long total_time = 0;
+
+
   for (i = 0; i < NUMBER; i++) {
     IsolationRule rule;
     rule.priority = 0;
     rule.isolation_level = 50;
     rule.type = RELATIVE;
+    DBUG_TRACE(&start);
     ids[i] = create_psandbox(rule);
-  }
-  DBUG_TRACE(&stop);
-  long time = time2ns(timeDiff(start,stop));
-  total_time += time;
-  printf("average time for create psandbox %lu ns\n", total_time/NUMBER);
-
-
-  for (i = 0; i < NUMBER; i++) {
+    DBUG_TRACE(&stop);
+    long time = time2ns(timeDiff(start,stop));
+    total_time += time;
     release_psandbox(ids[i]);
   }
+
+  printf("average time for create psandbox %lu ns\n", total_time/NUMBER);
+
   return 0;
 }
