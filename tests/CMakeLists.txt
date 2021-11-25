@@ -5,6 +5,7 @@ set(TEST_SOURCES
         freeze_benchmark.cpp
         bind_benchmark.cpp
         unbind_benchmark.cpp
+        update_benchmark.cpp
 )
 
 foreach(TEST_SOURCE_FILE ${TEST_SOURCES})
