@@ -12,7 +12,7 @@
 #include <pthread.h>
 #include "psandbox.h"
 
-#define NUMBER  1000000
+#define NUMBER  10000000
 
 int main() {
   int i,id;

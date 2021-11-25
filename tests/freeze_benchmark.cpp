@@ -12,7 +12,7 @@
 #include <pthread.h>
 #include "psandbox.h"
 
-#define NUMBER  1000000
+#define NUMBER  10000000
 
 int main() {
   int i,id;
@@ -23,7 +23,6 @@ int main() {
   rule.type = RELATIVE;
   id = create_psandbox(rule);
   struct timespec  start, stop;
-  static struct timespec every_second_start;
   static long total_time = 0;
 
 
@@ -34,9 +33,14 @@ int main() {
     DBUG_TRACE(&stop);
     long time = time2ns(timeDiff(start,stop));
     total_time += time;
-
   }
 
+  for (i = 0; i < NUMBER; i++) {
+    DBUG_TRACE(&start);
+    DBUG_TRACE(&stop);
+    long time = time2ns(timeDiff(start,stop));
+    total_time -= time;
+  }
 
   printf("average time for create psandbox %lu ns\n", total_time/NUMBER);
   release_psandbox(id);

@@ -12,7 +12,7 @@
 #include <pthread.h>
 #include "psandbox.h"
 
-#define NUMBER  1000
+#define NUMBER  10000
 
 int main() {
   int i;
@@ -33,6 +33,13 @@ int main() {
     DBUG_TRACE(&stop);
     time = time2ns(timeDiff(start,stop));
     total_time += time;
+  }
+
+  for (i = 0; i < NUMBER; i++) {
+    DBUG_TRACE(&start);
+    DBUG_TRACE(&stop);
+    long time = time2ns(timeDiff(start,stop));
+    total_time -= time;
   }
 
   printf("average time for release call is %lu ns\n", total_time/NUMBER);

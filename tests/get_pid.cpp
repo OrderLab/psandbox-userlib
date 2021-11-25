@@ -22,12 +22,6 @@ int main() {
     total_time += time;
   }
 
-  for (i = 0; i < NUMBER; i++) {
-    DBUG_TRACE(&start);
-    DBUG_TRACE(&stop);
-    long time = time2ns(timeDiff(start,stop));
-    total_time -= time;
-  }
 
 
   printf("average time for getpid %lu ns\n", total_time/NUMBER);
