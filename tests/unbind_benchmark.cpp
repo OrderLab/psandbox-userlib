@@ -31,11 +31,11 @@ int main() {
   for (i = 0; i < NUMBER; i++) {
     activate_psandbox(id);
     DBUG_TRACE(&start);
-    bind_psandbox(key);
+    unbind_psandbox(key,id);
     DBUG_TRACE(&stop);
     long time = time2ns(timeDiff(start,stop));
     total_time += time;
-    unbind_psandbox(key,id);
+    bind_psandbox(key);
     freeze_psandbox(id);
   }
 
