@@ -1,14 +1,14 @@
 set(TEST_SOURCES
   create_benchmark.cpp
   release_benchmark.cpp
-        activate_benchmark.cpp
-        freeze_benchmark.cpp
-        bind_benchmark.cpp
-        unbind_benchmark.cpp
-        update_benchmark.cpp
-        get_pid.cpp
-        pthread_create.cpp
-        fork.cpp
+  activate_benchmark.cpp
+  freeze_benchmark.cpp
+  bind_benchmark.cpp
+  unbind_benchmark.cpp
+  update_benchmark.cpp
+  get_pid.cpp
+  pthread_create.cpp
+  fork.cpp
 )
 
 foreach(TEST_SOURCE_FILE ${TEST_SOURCES})

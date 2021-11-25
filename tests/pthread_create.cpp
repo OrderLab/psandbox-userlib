@@ -6,7 +6,7 @@
 #include <pthread.h>
 #include "psandbox.h"
 
-#define NUMBER  1000000
+#define NUMBER  10000
 
 void* do_handle_one_connection(void* arg) {
   return 0;
@@ -19,17 +19,14 @@ int main() {
   struct timespec  start, stop;
   static struct timespec every_second_start;
   static long total_time = 0;
-
+  DBUG_TRACE(&start);
   for (i = 0; i < NUMBER; i++) {
-    DBUG_TRACE(&start);
     pthread_create (&threads, NULL, do_handle_one_connection, &arg);
-    DBUG_TRACE(&stop);
-    long time = time2ns(timeDiff(start,stop));
-    total_time += time;
-    pthread_join (threads, NULL);
   }
+  DBUG_TRACE(&stop);
+  long time = time2ns(timeDiff(start,stop));
+  total_time += time;
 
-
-  printf("average time for update psandbox %lu ns\n", total_time/NUMBER);
+  printf("average time for pthread create %lu ns\n", total_time/NUMBER);
   return 0;
 }

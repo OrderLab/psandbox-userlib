@@ -27,20 +27,18 @@ int main() {
   static struct timespec every_second_start;
   static long total_time = 0;
 
-
+  activate_psandbox(id);
+  DBUG_TRACE(&start);
   for (i = 0; i < NUMBER; i++) {
-    activate_psandbox(id);
-    DBUG_TRACE(&start);
     update_psandbox(key,PREPARE);
     update_psandbox(key,ENTER);
     update_psandbox(key,HOLD);
     update_psandbox(key,UNHOLD);
-    DBUG_TRACE(&stop);
-    long time = time2ns(timeDiff(start,stop));
-    total_time += time;
-    freeze_psandbox(id);
   }
-
+  DBUG_TRACE(&stop);
+  long time = time2ns(timeDiff(start,stop));
+  total_time += time;
+  freeze_psandbox(id);
 
   printf("average time for update psandbox %lu ns\n", total_time/(4*NUMBER));
   release_psandbox(id);
