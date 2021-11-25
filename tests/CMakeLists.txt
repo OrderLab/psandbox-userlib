@@ -3,6 +3,8 @@ set(TEST_SOURCES
   release_benchmark.cpp
         activate_benchmark.cpp
         freeze_benchmark.cpp
+        bind_benchmark.cpp
+        unbind_benchmark.cpp
 )
 
 foreach(TEST_SOURCE_FILE ${TEST_SOURCES})

@@ -16,6 +16,7 @@
 
 int main() {
   int i,id;
+  int key = 1000;
 
   IsolationRule rule;
   rule.priority = 0;
@@ -28,17 +29,18 @@ int main() {
 
 
   for (i = 0; i < NUMBER; i++) {
-    DBUG_TRACE(&start);
     activate_psandbox(id);
+    DBUG_TRACE(&start);
+    bind_psandbox(key);
     DBUG_TRACE(&stop);
     long time = time2ns(timeDiff(start,stop));
     total_time += time;
-
+    unbind_psandbox(key,id);
     freeze_psandbox(id);
   }
 
 
-  printf("average time for activate psandbox %lu ns\n", total_time/NUMBER);
+  printf("average time for bind psandbox %lu ns\n", total_time/NUMBER);
   release_psandbox(id);
   return 0;
 }
