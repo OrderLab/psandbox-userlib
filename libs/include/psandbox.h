@@ -22,7 +22,7 @@
 extern "C" {
 #endif
 
-#define HOLDER_SIZE 1000
+#define HOLDER_SIZE 50
 #define DBUG_TRACE(A) clock_gettime(CLOCK_REALTIME, A)
 #define NSEC_PER_SEC 1000000000L
 
