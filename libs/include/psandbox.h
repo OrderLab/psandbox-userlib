@@ -25,6 +25,7 @@ extern "C" {
 #define HOLDER_SIZE 50
 #define DBUG_TRACE(A) clock_gettime(CLOCK_REALTIME, A)
 #define NSEC_PER_SEC 1000000000L
+#define MAX_TIME 500
 
 #define HIGHEST_PRIORITY 2
 #define MID_PRIORITY 1
@@ -38,17 +39,6 @@ typedef struct sandboxEvent {
   unsigned int key;
 } BoxEvent;
 
-typedef struct activity {
-  struct timespec defer_time;
-  struct timespec delaying_start;
-  struct timespec execution_time;
-  struct timespec execution_start;
-  uint competitors;
-  int owned_mutex;  // TODO: use a slab to store each element and get one from
-                    // the pool when you need to use it.
-  int is_preempted;
-  int queue_event;
-} Activity;
 
 typedef struct pSandbox PSandbox;
 
@@ -56,10 +46,15 @@ typedef struct pSandbox PSandbox;
 typedef struct pSandbox {
   long bid;  // sandbox id used by syscalls
   long pid; // the thread that the perfSandbox is bound
-  Activity *activity;
 
   size_t holders[HOLDER_SIZE];
   int hold_resource;
+
+  //Debugger for tracing syscall number
+  long step;
+  long start_time;
+  long result[MAX_TIME];
+  long count;
 }PSandbox;
 
 typedef struct isolationRule {
@@ -140,13 +135,6 @@ static inline Time timeDiff(Time start, Time stop) {
   }
 
   return result;
-}
-
-static inline void Defertime(PSandbox *p_sandbox) {
-  struct timespec current_tm, defer_tm;
-  clock_gettime(CLOCK_REALTIME, &current_tm);
-  defer_tm = timeDiff(p_sandbox->activity->delaying_start, current_tm);
-  p_sandbox->activity->defer_time = timeAdd(defer_tm, p_sandbox->activity->defer_time);
 }
 
 static inline long time2ns(Time t1) {

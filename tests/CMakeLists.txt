@@ -9,6 +9,7 @@ set(TEST_SOURCES
   get_pid.cpp
   pthread_create.cpp
   fork.cpp
+        update_heavy.cpp
 )
 
 foreach(TEST_SOURCE_FILE ${TEST_SOURCES})
