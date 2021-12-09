@@ -99,7 +99,7 @@ int find_holder(size_t key);
 void penalize_psandbox(long int penalty,size_t key);
 
 /// The functions are to transfer psandbox ownership between threads
-int unbind_psandbox(size_t key, int pid, bool isLazy);
+int unbind_psandbox(size_t key, int pid, bool isLazy, bool isAccept);
 int bind_psandbox(size_t key);
 
 int psandbox_manager_init();
