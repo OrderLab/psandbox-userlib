@@ -77,14 +77,14 @@ int release_psandbox(int pid);
 /// @param event The event to notify the performance p_sandbox.
 /// @param p_sandbox The p_sandbox to notify
 /// @return On success 1 is returned.
-long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_lazy);
+long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_lazy, int is_pass);
 
 /// @brief Update an event to the performance p_sandbox
 /// @param event The event to notify the performance p_sandbox.
 /// @param p_sandbox The p_sandbox to notify
 /// @return On success 1 is returned.
 inline long int update_psandbox(size_t key, enum enum_event_type event_type) {
-  return do_update_psandbox(key,event_type,false);
+  return do_update_psandbox(key,event_type,false,false);
 }
 
 void activate_psandbox(int pid);

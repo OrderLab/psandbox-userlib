@@ -220,7 +220,7 @@ int find_holder(size_t key) {
 }
 
 
-long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_lazy) {
+long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_lazy, int is_pass) {
   long int success = 0;
   BoxEvent event;
 
@@ -278,9 +278,12 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
           psandbox->holders[i] = 0;
 //          psandbox->hold_resource--;
 //          if (psandbox->hold_resource == 0)
-            success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
+          if (!is_pass)
+              success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
         }
       }
+      if (is_pass)
+        success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
       break;
     }
     default:
