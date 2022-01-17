@@ -55,6 +55,7 @@ typedef struct pSandbox {
   long start_time;
   long result[MAX_TIME];
   long count;
+  long activity;
 }PSandbox;
 
 typedef struct isolationRule {
@@ -139,6 +140,10 @@ static inline Time timeDiff(Time start, Time stop) {
 
 static inline long time2ns(Time t1) {
   return t1.tv_sec * 1000000000L + t1.tv_nsec;
+}
+
+static inline long time2ms(Time t1) {
+  return (t1.tv_sec * 1000000000L + t1.tv_nsec)/1000000;
 }
 
 #ifdef __cplusplus
