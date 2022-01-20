@@ -280,7 +280,9 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
 //          if (psandbox->hold_resource == 0)
           if (!is_pass)
               success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
+          break;
         }
+
       }
       if (is_pass)
         success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
