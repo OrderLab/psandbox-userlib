@@ -167,7 +167,8 @@ int get_psandbox(size_t key) {
   return pid;
 }
 
-int unbind_psandbox(size_t key, int pid) {
+
+int unbind_psandbox(size_t key, int pid, enum enum_unbind_flag flags) {
 #ifdef DISABLE_PSANDBOX
   return -1;
 #endif
@@ -175,10 +176,11 @@ int unbind_psandbox(size_t key, int pid) {
     printf("Error: Can't unbind sandbox for the thread %ld\n",syscall(SYS_gettid));
     return -1;
   }
+
 #ifdef TRACE_NUMBER
   TRACK_SYSCALL();
 #endif
-  if(syscall(SYS_UNBIND_PSANDBOX, key)) {
+  if(syscall(SYS_UNBIND_PSANDBOX, key, flags)) {
     psandbox_id = 0;
     return 0;
   }
