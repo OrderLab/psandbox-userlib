@@ -30,7 +30,7 @@ int main() {
   activate_psandbox(id);
 
   for (i = 0; i < NUMBER; i++) {
-    unbind_psandbox(key,id);
+    unbind_psandbox(key,id,UNBIND_NONE);
     DBUG_TRACE(&start);
     bind_psandbox(key);
     DBUG_TRACE(&stop);
