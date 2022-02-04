@@ -31,6 +31,12 @@ extern "C" {
 
 enum enum_event_type { PREPARE, ENTER, HOLD, UNHOLD, COND_WAKE };
 enum enum_isolation_type { ABSOLUTE, RELATIVE, SCALABLE, ISOLATION_DEFAULT};
+enum enum_unbind_flag {
+    UNBIND_LAZY           = 0x1,
+    UNBIND_ACT_UNFINISHED = 0x2,
+    UNBIND_HANDLE_ACCEPT  = 0x4,
+    UNBIND_NONE           = 0x0,
+};
 
 typedef struct sandboxEvent {
   enum enum_event_type event_type;
@@ -99,7 +105,7 @@ int find_holder(size_t key);
 void penalize_psandbox(long int penalty,size_t key);
 
 /// The functions are to transfer psandbox ownership between threads
-int unbind_psandbox(size_t key, int pid, bool isLazy, bool isAccept);
+int unbind_psandbox(size_t key, int pid, enum enum_unbind_flag flags);
 int bind_psandbox(size_t key);
 
 int psandbox_manager_init();
