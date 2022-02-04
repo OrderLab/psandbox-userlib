@@ -16,14 +16,16 @@
 #include <stddef.h>
 #include <sys/types.h>
 #include <unistd.h>
-#include "hashmap.h"
+
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#define HOLDER_SIZE 1000
+#define HOLDER_SIZE 50
 #define DBUG_TRACE(A) clock_gettime(CLOCK_REALTIME, A)
+#define NSEC_PER_SEC 1000000000L
+#define MAX_TIME 500
 
 #define HIGHEST_PRIORITY 2
 #define MID_PRIORITY 1
@@ -43,18 +45,6 @@ typedef struct sandboxEvent {
   unsigned int key;
 } BoxEvent;
 
-typedef struct activity {
-  struct timespec defer_time;
-  struct timespec delaying_start;
-  struct timespec execution_time;
-  struct timespec execution_start;
-  uint competitors;
-  int owned_mutex;  // TODO: use a slab to store each element and get one from
-                    // the pool when you need to use it.
-  int is_preempted;
-  int queue_event;
-  unsigned int key;
-} Activity;
 
 typedef struct pSandbox PSandbox;
 
@@ -62,10 +52,16 @@ typedef struct pSandbox PSandbox;
 typedef struct pSandbox {
   long bid;  // sandbox id used by syscalls
   long pid; // the thread that the perfSandbox is bound
-  Activity *activity;
 
-  unsigned int holders[HOLDER_SIZE];
+  size_t holders[HOLDER_SIZE];
   int hold_resource;
+
+  //Debugger for tracing syscall number
+  long step;
+  long start_time;
+  long result[MAX_TIME];
+  long count;
+  long activity;
 }PSandbox;
 
 typedef struct isolationRule {
@@ -87,14 +83,14 @@ int release_psandbox(int pid);
 /// @param event The event to notify the performance p_sandbox.
 /// @param p_sandbox The p_sandbox to notify
 /// @return On success 1 is returned.
-long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_lazy);
+long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_lazy, int is_pass);
 
 /// @brief Update an event to the performance p_sandbox
 /// @param event The event to notify the performance p_sandbox.
 /// @param p_sandbox The p_sandbox to notify
 /// @return On success 1 is returned.
 inline long int update_psandbox(size_t key, enum enum_event_type event_type) {
-  return do_update_psandbox(key,event_type,false);
+  return do_update_psandbox(key,event_type,false,false);
 }
 
 void activate_psandbox(int pid);
@@ -111,6 +107,40 @@ int bind_psandbox(size_t key);
 int psandbox_manager_init();
 
 void print_all();
+
+
+typedef struct timespec Time;
+
+static inline Time timeAdd(Time t1, Time t2) {
+  long sec = t2.tv_sec + t1.tv_sec;
+  long nsec = t2.tv_nsec + t1.tv_nsec;
+  if (nsec >= NSEC_PER_SEC) {
+    nsec -= NSEC_PER_SEC;
+    sec++;
+  }
+  return (Time) {.tv_sec = sec, .tv_nsec = nsec};
+}
+
+static inline Time timeDiff(Time start, Time stop) {
+  struct timespec result;
+  if ((stop.tv_nsec - start.tv_nsec) < 0) {
+    result.tv_sec = stop.tv_sec - start.tv_sec - 1;
+    result.tv_nsec = stop.tv_nsec - start.tv_nsec + 1000000000;
+  } else {
+    result.tv_sec = stop.tv_sec - start.tv_sec;
+    result.tv_nsec = stop.tv_nsec - start.tv_nsec;
+  }
+
+  return result;
+}
+
+static inline long time2ns(Time t1) {
+  return t1.tv_sec * 1000000000L + t1.tv_nsec;
+}
+
+static inline long time2ms(Time t1) {
+  return (t1.tv_sec * 1000000000L + t1.tv_nsec)/1000000;
+}
 
 #ifdef __cplusplus
 }

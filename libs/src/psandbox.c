@@ -35,49 +35,31 @@
 
 static __thread int psandbox_id;
 
-#define NSEC_PER_SEC 1000000000L
-
 //#define DISABLE_PSANDBOX
+//#define TRACE_NUMBER
 struct hashmap_s  *psandbox_map = NULL;
 
 /* lock for updating the stats variables */
 pthread_mutex_t stats_lock = PTHREAD_MUTEX_INITIALIZER;
 //pthread_mutex_t transfer_lock = PTHREAD_MUTEX_INITIALIZER;
-typedef struct timespec Time;
 
-static inline Time timeAdd(Time t1, Time t2) {
-  long sec = t2.tv_sec + t1.tv_sec;
-  long nsec = t2.tv_nsec + t1.tv_nsec;
-  if (nsec >= NSEC_PER_SEC) {
-    nsec -= NSEC_PER_SEC;
-    sec++;
-  }
-  return (Time) {.tv_sec = sec, .tv_nsec = nsec};
-}
 
-static inline Time timeDiff(Time start, Time stop) {
-  struct timespec result;
-  if ((stop.tv_nsec - start.tv_nsec) < 0) {
-    result.tv_sec = stop.tv_sec - start.tv_sec - 1;
-    result.tv_nsec = stop.tv_nsec - start.tv_nsec + 1000000000;
-  } else {
-    result.tv_sec = stop.tv_sec - start.tv_sec;
-    result.tv_nsec = stop.tv_nsec - start.tv_nsec;
-  }
-
-  return result;
-}
-
-static inline void Defertime(PSandbox *p_sandbox) {
-  struct timespec current_tm, defer_tm;
-  clock_gettime(CLOCK_REALTIME, &current_tm);
-  defer_tm = timeDiff(p_sandbox->activity->delaying_start, current_tm);
-  p_sandbox->activity->defer_time = timeAdd(defer_tm, p_sandbox->activity->defer_time);
-}
-
-static inline long time2ns(Time t1) {
-  return t1.tv_sec * 1000000000L + t1.tv_nsec;
-}
+#define TRACK_SYSCALL() do {\
+  PSandbox* p_sandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0); \
+  if(!p_sandbox) {         \
+    printf("error the psandbox is none\n");     \
+    break;                  \
+  }                          \
+  p_sandbox->count++;\
+  long i = p_sandbox->count % p_sandbox->step;\
+  if (i == 0) {\
+  if (p_sandbox->result[p_sandbox->count / p_sandbox->step] != 0)\
+      printf("error the result is there in %lu\n",i);\
+    struct timespec current;\
+    DBUG_TRACE(&current);\
+    p_sandbox->result[p_sandbox->count / p_sandbox->step] = time2ms(current) - p_sandbox->start_time; \
+  }\
+} while(0)\
 
 int psandbox_manager_init() {
   return syscall(SYS_START_MANAGER,&stats_lock);
@@ -109,13 +91,21 @@ int create_psandbox(IsolationRule rule) {
   }
 
   psandbox_id = bid;
-  p_sandbox = (struct pSandbox *) malloc(sizeof(struct pSandbox));
+  p_sandbox = (struct pSandbox *) calloc(sizeof(struct pSandbox),1);
   p_sandbox->pid = bid;
 
   pthread_mutex_lock(&stats_lock);
   hashmap_put(psandbox_map, bid, p_sandbox,0);
 //  printf("create psandbox %d\n",psandbox_id);
   pthread_mutex_unlock(&stats_lock);
+#ifdef TRACE_NUMBER
+  p_sandbox->step = 10000;
+  struct timespec start;
+  DBUG_TRACE(&start);
+  p_sandbox->start_time  = time2ms(start);
+  p_sandbox->count++;
+  p_sandbox->activity = 0;
+#endif
   return bid;
 }
 
@@ -135,8 +125,13 @@ int release_psandbox(int pid) {
     printf("failed to release sandbox in the kernel: %s\n", strerror(errno));
     return success;
   }
+   #ifdef TRACE_NUMBER
+  print_all();
+  #endif
   hashmap_remove(psandbox_map, pid);
   psandbox_id = 0;
+
+
   return success;
 }
 
@@ -145,9 +140,10 @@ int get_current_psandbox() {
   return -1;
   #endif
   int pid = (int) syscall(SYS_GET_CURRENT_PSANDBOX);
-
 //  int bid = syscall(SYS_gettid);
-
+#ifdef TRACE_NUMBER
+ TRACK_SYSCALL();
+#endif
   if (pid == -1) {
 //    printf("Error: Can't get sandbox for the thread %d\n",syscall(SYS_gettid));
     return -1;
@@ -161,12 +157,13 @@ int get_psandbox(size_t key) {
   return -1;
   #endif
   int pid = (int) syscall(SYS_GET_PSANDBOX, key);
-
+#ifdef TRACE_NUMBER
+  TRACK_SYSCALL();
+#endif
   if (pid == -1) {
     printf("Error: Can't get sandbox for the id %d\n", pid);
     return -1;
   }
-
   return pid;
 }
 
@@ -180,19 +177,25 @@ int unbind_psandbox(size_t key, int pid, enum enum_unbind_flag flags) {
     return -1;
   }
 
+#ifdef TRACE_NUMBER
+  TRACK_SYSCALL();
+#endif
   if(syscall(SYS_UNBIND_PSANDBOX, key, flags)) {
     psandbox_id = 0;
     return 0;
   }
+
   printf("error: unbind fail for psandbox %d\n", pid);
   return -1;
 }
 
 int bind_psandbox(size_t key) {
-  #ifdef DISABLE_PSANDBOX
+#ifdef DISABLE_PSANDBOX
   return -1;
 #endif
-
+#ifdef TRACE_NUMBER
+  TRACK_SYSCALL();
+#endif
   int bid = (int) syscall(SYS_BIND_PSANDBOX, key);
 
   if (bid == -1) {
@@ -207,6 +210,9 @@ int find_holder(size_t key) {
   PSandbox *psandbox;
   int i;
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+#ifdef TRACE_NUMBER
+  TRACK_SYSCALL();
+#endif
   for (i = 0; i < HOLDER_SIZE ; ++i) {
     if (psandbox->holders[i] == key) {
       return i;
@@ -216,7 +222,7 @@ int find_holder(size_t key) {
 }
 
 
-long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_lazy) {
+long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_lazy, int is_pass) {
   long int success = 0;
   BoxEvent event;
 
@@ -231,10 +237,17 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
   static int count = 0;
   DBUG_TRACE(&start);
 #endif
+
+
   event.key = key;
   event.event_type = event_type;
-  if(psandbox_id == 0)
+  if(psandbox_id == 0) {
     return -1;
+  }
+#ifdef TRACE_NUMBER
+  TRACK_SYSCALL();
+#endif
+
   switch (event_type) {
     case HOLD: {
       int i;
@@ -242,7 +255,9 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
       for (i = 0; i < HOLDER_SIZE ; ++i) {
         if (psandbox->holders[i] == 0) {
           psandbox->holders[i] = key;
-          psandbox->hold_resource++;
+//          psandbox->hold_resource++;
+          break;
+        } else if (psandbox->holders[i] == key){
           break;
         }
       }
@@ -255,25 +270,28 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
     }
     case UNHOLD: {
       int i;
-
+      if(is_lazy) {
+        success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
+        break;
+      }
       psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
       for (i = 0; i < HOLDER_SIZE ; ++i) {
         if (psandbox->holders[i] == key) {
           psandbox->holders[i] = 0;
-          psandbox->hold_resource--;
-          if (psandbox->hold_resource == 0)
-            success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
+//          psandbox->hold_resource--;
+//          if (psandbox->hold_resource == 0)
+          if (!is_pass)
+              success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
+          break;
         }
+
       }
-      break;
-    }
-    case COND_WAKE: {
-      event.event_type = UNHOLD;
-      success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
+      if (is_pass)
+        success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
       break;
     }
     default:
-      success = syscall(SYS_UPDATE_EVENT,&event);
+      success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
       break;
   }
 
@@ -291,24 +309,27 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
   return success;
 }
 
-void penalize_psandbox(long int penalty, size_t key) {
-  if(penalty > 1000) {
-    syscall(SYS_PENALIZE_EVENT,penalty,key);
-  }
-}
-
 void activate_psandbox(int pid) {
+
   if (pid == -1) {
 //    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->pid, p_sandbox->activity);
     return;
   }
 #ifdef DISABLE_PSANDBOX
   return ;
+#endif
+#ifdef TRACE_NUMBER
+  TRACK_SYSCALL();
+  PSandbox* p_sandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+  p_sandbox->activity++;
 #endif
   syscall(SYS_ACTIVATE_PSANDBOX);
 }
 
 void freeze_psandbox(int pid) {
+#ifdef TRACE_NUMBER
+  TRACK_SYSCALL();
+#endif
   if (pid == -1) {
 //    printf("the active psandbox %lu is empty, the activity %p is empty\n", p_sandbox->pid, p_sandbox->activity);
     return;
@@ -316,47 +337,19 @@ void freeze_psandbox(int pid) {
 #ifdef DISABLE_PSANDBOX
   return ;
 #endif
+#ifdef TRACE_NUMBER
+  TRACK_SYSCALL();
+#endif
   syscall(SYS_FREEZE_PSANDBOX);
 }
 
-//int get_bid(){
-//  return bid;
-//}
-
-//void print_all(){
-//  int counts[1000],small_counts[10];
-//  int _count;
-//  int i;
-//
-//  _count = 0;
-//  for ( i = 0; i < 1000; i++) {
-//    counts[i] = 0;
-//  }
-//
-//  for ( i = 0; i < 10; i++) {
-//    small_counts[i] = 0;
-//  }
-//
-//  for (i = 0; i < psandbox_map.table_size; i++) {
-//    if (psandbox_map.data[i].in_use) {
-//      _count += ((PSandbox *)psandbox_map.data[i].data)->_count;
-//      for(int j = 0; j < 1000; j++) {
-//        counts[j] += ((PSandbox *)psandbox_map.data[i].data)->counts[j];
-//
-//      }
-//      for (int j = 0; j < 10; ++j) {
-//        small_counts[j]=  ((PSandbox *)psandbox_map.data[i].data)->small_counts[j];
-//      }
-//    }
-//  }
-//
-//    printf("Latency histogram (values are in milliseconds)\n");
-//    printf("value -- count\n");
-//    for(i = 0; i < 1000; i ++) {
-//      if (counts[i])
-//        printf("<%ums,%ums>| %u\n",i,i+1,counts[i]);
-//    }
-//    if (_count > 0) {
-//      printf("<%us,>| %u\n",i,_count);
-//    }
-//}
+void print_all(){
+  long i;
+  PSandbox *psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+  printf("Latency histogram (values are in nanoseconds) for pid %d\n",psandbox_id);
+  printf("value -- count\n");
+  printf("average number %lu\n",psandbox->count/psandbox->activity);
+  for (i = 0; i < (psandbox->count / psandbox->step); i++) {
+    printf("syscall: %lu | %u ms\n",(i)*psandbox->step,psandbox->result[i]);
+  }
+}
