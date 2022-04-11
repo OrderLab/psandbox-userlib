@@ -33,6 +33,12 @@ extern "C" {
 
 enum enum_event_type { PREPARE, ENTER, HOLD, UNHOLD, COND_WAKE };
 enum enum_isolation_type { ABSOLUTE, RELATIVE, SCALABLE, ISOLATION_DEFAULT};
+enum enum_unbind_flag {
+    UNBIND_LAZY           = 0x1,
+    UNBIND_ACT_UNFINISHED = 0x2,
+    UNBIND_HANDLE_ACCEPT  = 0x4,
+    UNBIND_NONE           = 0x0,
+};
 
 typedef struct sandboxEvent {
   enum enum_event_type event_type;
@@ -96,17 +102,7 @@ int find_holder(size_t key);
 void penalize_psandbox(long int penalty,size_t key);
 
 /// The functions are to transfer psandbox ownership between threads
-/// Case A, thread A -> B, A knows B's thread id
-///   In A, call mount_psandbox (A_p_sandbox, B's thread id)
-///     -> this stop tracing the current task and 
-///        mount psandbox in to a global struct for B to recieve
-///   In B, call unmount_psandbox()
-///     -> this lookup the global struct to recieve its 
-/// Case B, thread A -> B, A doesn't know B's thread id
-///   solution, another global struct, B's get pbox by the same event key?
-///   unmount, iterate first global struct, if no, check the second for the 
-///   same key
-int unbind_psandbox(size_t key, int pid);
+int unbind_psandbox(size_t key, int pid, enum enum_unbind_flag flags);
 int bind_psandbox(size_t key);
 
 int psandbox_manager_init();
