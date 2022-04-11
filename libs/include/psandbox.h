@@ -62,6 +62,7 @@ typedef struct isolationRule {
   enum enum_isolation_type type;
   int isolation_level;
   int priority;
+  int is_retro;
 }IsolationRule;
 
 /// @brief Create a performance sandbox

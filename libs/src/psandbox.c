@@ -36,6 +36,7 @@
 static __thread int psandbox_id;
 
 //#define DISABLE_PSANDBOX
+#define IS_RETRO
 //#define TRACE_NUMBER
 struct hashmap_s  *psandbox_map = NULL;
 
@@ -76,9 +77,15 @@ int create_psandbox(IsolationRule rule) {
     rule.type = SCALABLE;
     rule.isolation_level = 100;
     rule.priority = LOW_PRIORITY;
+    rule.is_retro = false;
   }
-
+#ifdef IS_RETRO
+  rule.is_retro = true;
   bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
+#elif
+  bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
+#endif
+
 //  bid = syscall(SYS_gettid);
   if (bid == -1) {
     printf("syscall failed with errno: %s\n", strerror(errno));
