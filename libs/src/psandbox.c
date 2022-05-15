@@ -275,7 +275,8 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
 
       break;
     }
-    case UNHOLD: {
+    case UNHOLD:
+    case UNHOLD_IN_QUEUE_PENALTY: {
       int i;
       if(is_lazy) {
         success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);
