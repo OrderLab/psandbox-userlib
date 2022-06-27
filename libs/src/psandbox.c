@@ -36,7 +36,7 @@
 static __thread int psandbox_id;
 
 //#define DISABLE_PSANDBOX
-#define IS_RETRO
+//#define IS_RETRO
 //#define TRACE_NUMBER
 struct hashmap_s  *psandbox_map = NULL;
 
@@ -82,7 +82,7 @@ int create_psandbox(IsolationRule rule) {
 #ifdef IS_RETRO
   rule.is_retro = true;
   bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
-#elif
+#else
   bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
 #endif
 
