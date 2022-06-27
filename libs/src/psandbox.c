@@ -38,6 +38,7 @@ static __thread int psandbox_id;
 //#define DISABLE_PSANDBOX
 //#define IS_RETRO
 //#define TRACE_NUMBER
+#define NO_LIB
 struct hashmap_s  *psandbox_map = NULL;
 
 /* lock for updating the stats variables */
@@ -82,6 +83,9 @@ int create_psandbox(IsolationRule rule) {
 #ifdef IS_RETRO
   rule.is_retro = true;
   bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
+#elif defined(NO_LIB)
+  bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
+  return bid;
 #else
   bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
 #endif
@@ -126,7 +130,13 @@ int release_psandbox(int pid) {
   if (pid == -1)
     return success;
 
+#ifdef NO_LIB
   success = (int) syscall(SYS_RELEASE_PSANDBOX, pid);
+  return success;
+#else
+  success = (int) syscall(SYS_RELEASE_PSANDBOX, pid);
+#endif
+
 
   if (success == -1) {
     printf("failed to release sandbox in the kernel: %s\n", strerror(errno));
@@ -275,7 +285,8 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
 
       break;
     }
-    case UNHOLD: {
+    case UNHOLD:
+    case UNHOLD_IN_QUEUE_PENALTY: {
       int i;
       if(is_lazy) {
         success = syscall(SYS_UPDATE_EVENT,&event,is_lazy);

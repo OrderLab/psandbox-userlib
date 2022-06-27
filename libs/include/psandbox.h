@@ -31,7 +31,7 @@ extern "C" {
 #define MID_PRIORITY 1
 #define LOW_PRIORITY 0
 
-enum enum_event_type { PREPARE, ENTER, HOLD, UNHOLD, COND_WAKE };
+enum enum_event_type { PREPARE, ENTER, HOLD, UNHOLD, UNHOLD_IN_QUEUE_PENALTY, COND_WAKE };
 enum enum_isolation_type { ABSOLUTE, RELATIVE, SCALABLE, ISOLATION_DEFAULT};
 enum enum_unbind_flag {
     UNBIND_LAZY           = 0x1,
