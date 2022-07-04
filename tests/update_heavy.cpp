@@ -64,10 +64,5 @@ int main() {
   for (i = 0; i < THREAD; i++) {
     pthread_create(&threads[i], NULL, do_handle_one_connection, &arg[i]);
   }
-
-  pthread_join (threads[19], NULL);
-  for (i = 0; i < THREAD; i++) {
-    pthread_cancel(threads[i]);
-  }
   return 0;
 }
