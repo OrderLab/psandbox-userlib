@@ -38,7 +38,7 @@ static __thread int psandbox_id;
 //#define DISABLE_PSANDBOX
 //#define IS_RETRO
 //#define TRACE_NUMBER
-#define NO_LIB
+//#define NO_LIB
 struct hashmap_s  *psandbox_map = NULL;
 
 /* lock for updating the stats variables */
