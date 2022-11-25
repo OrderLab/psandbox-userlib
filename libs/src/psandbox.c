@@ -82,12 +82,12 @@ int create_psandbox(IsolationRule rule) {
   }
 #ifdef IS_RETRO
   rule.is_retro = true;
-  bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
+  bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority, true);
 #elif defined(NO_LIB)
   bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
   return bid;
 #else
-  bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority);
+  bid = syscall(SYS_CREATE_PSANDBOX,rule.type,rule.isolation_level,rule.priority,false);
 #endif
 
 //  bid = syscall(SYS_gettid);
