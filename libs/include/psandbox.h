@@ -90,7 +90,7 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
 /// @param event The event to notify the performance p_sandbox.
 /// @param p_sandbox The p_sandbox to notify
 /// @return On success 1 is returned.
-long int update_psandbox(size_t key, enum enum_event_type event_type) {
+long inline int update_psandbox(size_t key, enum enum_event_type event_type) {
   return do_update_psandbox(key,event_type,false,false);
 }
 
