@@ -62,6 +62,7 @@ typedef struct pSandbox {
   long result[MAX_TIME];
   long count;
   long activity;
+  long smaple_count;
 }PSandbox;
 
 typedef struct isolationRule {
@@ -104,6 +105,11 @@ void penalize_psandbox(long int penalty,size_t key);
 /// The functions are to transfer psandbox ownership between threads
 int unbind_psandbox(size_t key, int pid, enum enum_unbind_flag flags);
 int bind_psandbox(size_t key);
+
+// Add sampling logic
+int record_psandbox(int pid);
+int get_sample_rate(int pid);
+int get_psandbox_record(int pid);
 
 int psandbox_manager_init();
 

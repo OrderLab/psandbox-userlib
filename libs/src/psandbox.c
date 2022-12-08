@@ -327,6 +327,19 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
   return success;
 }
 
+int record_psandbox(int pid) {
+  PSandbox *psandbox;
+  psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+  psandbox->smaple_count++;
+  return 1;
+}
+
+int get_psandbox_record(int pid) {
+  PSandbox *psandbox;
+  psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+  return psandbox->smaple_count;
+}
+
 void activate_psandbox(int pid) {
 
   if (pid == -1) {
@@ -341,6 +354,8 @@ void activate_psandbox(int pid) {
   PSandbox* p_sandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
   p_sandbox->activity++;
 #endif
+  PSandbox* p_sandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+  p_sandbox->activity++;
   syscall(SYS_ACTIVATE_PSANDBOX);
 }
 
