@@ -62,7 +62,7 @@ typedef struct pSandbox {
   long result[MAX_TIME];
   long count;
   long activity;
-  long smaple_count;
+  long sample_count;
 }PSandbox;
 
 typedef struct isolationRule {
