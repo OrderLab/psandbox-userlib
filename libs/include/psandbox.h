@@ -62,7 +62,8 @@ typedef struct pSandbox {
   long result[MAX_TIME];
   long count;
   long activity;
-  long smaple_count;
+  long sample_count;
+  int is_sample;
 }PSandbox;
 
 typedef struct isolationRule {
@@ -110,6 +111,8 @@ int bind_psandbox(size_t key);
 int record_psandbox(int pid);
 int get_sample_rate(int pid);
 int get_psandbox_record(int pid);
+int sample_psandbox(int pid);
+int end_sample_psandbox(int pid);
 
 int psandbox_manager_init();
 

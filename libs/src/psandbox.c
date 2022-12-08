@@ -329,15 +329,65 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
 
 int record_psandbox(int pid) {
   PSandbox *psandbox;
+#ifdef DISABLE_PSANDBOX
+  return 1;
+#endif
+  if (pid == -1)
+    return -1;
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
-  psandbox->smaple_count++;
+  psandbox->sample_count++;
+  return 1;
+}
+
+int get_sample_rate(int pid) {
+  PSandbox *psandbox;
+#ifdef DISABLE_PSANDBOX
+  return 1;
+#endif
+  if (pid == -1)
+    return -1;
+
+  psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+  if (psandbox->is_sample == 1) {
+    return 1;
+  }
+
+  return rand() % 4;
+}
+
+int sample_psandbox(int pid) {
+  PSandbox *psandbox;
+#ifdef DISABLE_PSANDBOX
+  return 1;
+#endif
+  if (pid == -1)
+    return -1;
+  psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+  psandbox->is_sample = 1;
+  return 1;
+}
+
+int end_sample_psandbox(int pid) {
+  PSandbox *psandbox;
+#ifdef DISABLE_PSANDBOX
+  return 1;
+#endif
+  if (pid == -1)
+    return -1;
+  psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+  psandbox->is_sample = 0;
   return 1;
 }
 
 int get_psandbox_record(int pid) {
   PSandbox *psandbox;
+#ifdef DISABLE_PSANDBOX
+  return 1;
+#endif
+  if (pid == -1)
+    return -1;
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
-  return psandbox->smaple_count;
+  return psandbox->sample_count;
 }
 
 void activate_psandbox(int pid) {
