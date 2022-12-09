@@ -361,7 +361,7 @@ int get_sample_rate(int pid) {
   return i;
 }
 
-int sample_psandbox(int pid) {
+int sample_psandbox() {
   PSandbox *psandbox;
 #ifdef DISABLE_PSANDBOX
   return 1;
@@ -373,7 +373,7 @@ int sample_psandbox(int pid) {
   return 1;
 }
 
-int is_sample(int is_end ) {
+int is_sample(int is_end) {
   PSandbox *psandbox;
 #ifdef DISABLE_PSANDBOX
   return 1;

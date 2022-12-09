@@ -111,7 +111,7 @@ int bind_psandbox(size_t key);
 int record_psandbox(int pid);
 int get_sample_rate(int pid);
 int get_psandbox_record(int pid);
-int sample_psandbox(int pid);
+int sample_psandbox();
 int is_sample(int is_end);
 int psandbox_manager_init();
 
