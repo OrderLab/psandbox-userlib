@@ -327,7 +327,7 @@ long int do_update_psandbox(size_t key, enum enum_event_type event_type, int is_
   return success;
 }
 
-int record_psandbox(int pid) {
+int record_psandbox() {
   PSandbox *psandbox;
 #ifdef DISABLE_PSANDBOX
   return 1;
@@ -339,7 +339,7 @@ int record_psandbox(int pid) {
   return 1;
 }
 
-int get_sample_rate(int pid) {
+int get_sample_rate() {
   PSandbox *psandbox;
   int i;
 #ifdef DISABLE_PSANDBOX
@@ -391,7 +391,7 @@ int is_sample(int is_end) {
   return 1;
 }
 
-int get_psandbox_record(int pid) {
+int get_psandbox_record() {
   PSandbox *psandbox;
 #ifdef DISABLE_PSANDBOX
   return 1;

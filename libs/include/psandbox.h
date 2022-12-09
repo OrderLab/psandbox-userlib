@@ -108,9 +108,9 @@ int unbind_psandbox(size_t key, int pid, enum enum_unbind_flag flags);
 int bind_psandbox(size_t key);
 
 // Add sampling logic
-int record_psandbox(int pid);
-int get_sample_rate(int pid);
-int get_psandbox_record(int pid);
+int record_psandbox();
+int get_sample_rate();
+int get_psandbox_record();
 int sample_psandbox();
 int is_sample(int is_end);
 int psandbox_manager_init();
