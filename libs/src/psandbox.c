@@ -332,7 +332,7 @@ int record_psandbox(int pid) {
 #ifdef DISABLE_PSANDBOX
   return 1;
 #endif
-  if (pid == -1)
+  if (psandbox_id == 0)
     return -1;
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
   psandbox->sample_count++;
@@ -341,10 +341,11 @@ int record_psandbox(int pid) {
 
 int get_sample_rate(int pid) {
   PSandbox *psandbox;
+  int i;
 #ifdef DISABLE_PSANDBOX
   return 1;
 #endif
-  if (pid == -1)
+  if (psandbox_id == 0)
     return -1;
 
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
@@ -352,7 +353,12 @@ int get_sample_rate(int pid) {
     return 0;
   }
 
-  return rand() % 4;
+  i = rand() % 4;
+
+  if(i == 0)
+    psandbox->is_sample = 1;
+
+  return i;
 }
 
 int sample_psandbox(int pid) {
@@ -360,38 +366,28 @@ int sample_psandbox(int pid) {
 #ifdef DISABLE_PSANDBOX
   return 1;
 #endif
-  if (pid == -1)
+  if (psandbox_id == 0)
     return -1;
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
   psandbox->is_sample = 1;
   return 1;
 }
 
-int is_sample(int pid ) {
+int is_sample(int pid, int is_end ) {
   PSandbox *psandbox;
 #ifdef DISABLE_PSANDBOX
   return 1;
 #endif
-  if (pid == -1)
+  if (psandbox_id == 0)
     return -1;
 
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
   if (psandbox->is_sample == 1) {
+    if (is_end)
+      psandbox->is_sample = 0;
     return 0;
   }
 
-  return 1;
-}
-
-int end_sample_psandbox(int pid) {
-  PSandbox *psandbox;
-#ifdef DISABLE_PSANDBOX
-  return 1;
-#endif
-  if (pid == -1)
-    return -1;
-  psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
-  psandbox->is_sample = 0;
   return 1;
 }
 
@@ -400,7 +396,7 @@ int get_psandbox_record(int pid) {
 #ifdef DISABLE_PSANDBOX
   return 1;
 #endif
-  if (pid == -1)
+  if (psandbox_id == 0)
     return -1;
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
   return psandbox->sample_count;
