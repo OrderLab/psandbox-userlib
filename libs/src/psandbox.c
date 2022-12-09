@@ -416,8 +416,6 @@ void activate_psandbox(int pid) {
   PSandbox* p_sandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
   p_sandbox->activity++;
 #endif
-  PSandbox* p_sandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
-  p_sandbox->activity++;
   syscall(SYS_ACTIVATE_PSANDBOX);
 }
 
