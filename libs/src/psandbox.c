@@ -353,7 +353,7 @@ int get_sample_rate() {
     return 0;
   }
 
-  i = rand() % 4;
+  i = rand() % 5;
 
   if(i == 0)
     psandbox->is_sample = 1;
