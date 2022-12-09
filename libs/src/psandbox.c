@@ -349,7 +349,7 @@ int get_sample_rate(int pid) {
 
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
   if (psandbox->is_sample == 1) {
-    return 1;
+    return 0;
   }
 
   return rand() % 4;
@@ -364,6 +364,22 @@ int sample_psandbox(int pid) {
     return -1;
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
   psandbox->is_sample = 1;
+  return 1;
+}
+
+int is_sample(int pid ) {
+  PSandbox *psandbox;
+#ifdef DISABLE_PSANDBOX
+  return 1;
+#endif
+  if (pid == -1)
+    return -1;
+
+  psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
+  if (psandbox->is_sample == 1) {
+    return 0;
+  }
+
   return 1;
 }
 
