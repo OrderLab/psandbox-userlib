@@ -42,7 +42,7 @@ int main() {
     total_time -= time;
   }
 
-  printf("average time for create psandbox %lu ns\n", total_time/NUMBER);
+  printf("create, %lu\n", total_time/NUMBER);
 
   return 0;
 }
