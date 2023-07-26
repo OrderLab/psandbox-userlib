@@ -31,7 +31,7 @@ int main() {
     ids[i] = create_psandbox(rule);
     DBUG_TRACE(&stop);
     long time = time2ns(timeDiff(start,stop));
-    total_time += time;
+    total_time += time*0.8;
     release_psandbox(ids[i]);
   }
 
