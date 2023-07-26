@@ -8,7 +8,7 @@
 #include "psandbox.h"
 
 #define NUMBER  10000000
-#define THREAD 20
+#define THREAD 10
 
 void* do_handle_one_connection(void* arg) {
   int i,id;
@@ -20,9 +20,10 @@ void* do_handle_one_connection(void* arg) {
   rule.priority = 0;
   rule.isolation_level = 50;
   rule.type = RELATIVE;
+
   id = create_psandbox(rule);
   activate_psandbox(id);
-  if (j == 19) {
+  if (j == THREAD -1 ) {
     DBUG_TRACE(&start);
   }
 
@@ -30,12 +31,12 @@ void* do_handle_one_connection(void* arg) {
     update_psandbox(key,PREPARE);
     update_psandbox(key,ENTER);
     update_psandbox(key,HOLD);
-    if(j != 19) {
+    if(j != THREAD -1) {
       usleep(100);
     }
     update_psandbox(key,UNHOLD);
   }
-  if (j == 19) {
+  if (j == THREAD - 1) {
     DBUG_TRACE(&stop);
     long time = time2ns(timeDiff(start,stop));
     total_time += time;
@@ -43,8 +44,8 @@ void* do_handle_one_connection(void* arg) {
 
 
   freeze_psandbox(id);
-  if (j == 19) {
-    printf("average time for update psandbox %lu ns\n", total_time/(4*NUMBER));
+  if (j == THREAD - 1) {
+    printf("average time for heavy update psandbox %lu ns\n", total_time/(4*NUMBER));
   }
 
   release_psandbox(id);
@@ -63,9 +64,10 @@ int main() {
 
   for (i = 0; i < THREAD; i++) {
     pthread_create(&threads[i], NULL, do_handle_one_connection, &arg[i]);
+    usleep(100);
   }
 
-  pthread_join (threads[19], NULL);
+  pthread_join (threads[THREAD - 1], NULL);
   for (i = 0; i < THREAD; i++) {
     pthread_cancel(threads[i]);
   }
