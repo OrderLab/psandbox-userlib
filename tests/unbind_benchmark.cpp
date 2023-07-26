@@ -46,7 +46,7 @@ int main() {
     total_time -= time;
   }
 
-  printf("average time for unbind psandbox %lu ns\n", total_time/NUMBER);
+  printf("unbind, %lu\n", total_time/NUMBER);
   release_psandbox(id);
   return 0;
 }

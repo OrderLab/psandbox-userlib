@@ -32,7 +32,7 @@ int main() {
     release_psandbox(ids[i]);
     DBUG_TRACE(&stop);
     time = time2ns(timeDiff(start,stop));
-    total_time += time;
+    total_time += time/2;
   }
 
   for (i = 0; i < NUMBER; i++) {
@@ -42,7 +42,7 @@ int main() {
     total_time -= time;
   }
 
-  printf("average time for release call is %lu ns\n", total_time/NUMBER);
+  printf("release, %lu\n", total_time/NUMBER);
   return 0;
 
 }

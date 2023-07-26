@@ -24,6 +24,6 @@ int main() {
 
 
 
-  printf("average time for getpid %lu ns\n", total_time/NUMBER);
+  printf("getpid, %lu\n", total_time/NUMBER);
   return 0;
 }

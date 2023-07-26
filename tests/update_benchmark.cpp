@@ -40,7 +40,7 @@ int main() {
   total_time += time;
   freeze_psandbox(id);
 
-  printf("average time for update psandbox %lu ns\n", total_time/(4*NUMBER));
+  printf("update1 (no interf.), %lu\n", total_time/(4*NUMBER));
   release_psandbox(id);
   return 0;
 }
