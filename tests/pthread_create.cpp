@@ -27,6 +27,6 @@ int main() {
   long time = time2ns(timeDiff(start,stop));
   total_time += time;
 
-  printf("average time for pthread create %lu ns\n", total_time/NUMBER);
+  printf("pthread_create, %lu\n", total_time/NUMBER);
   return 0;
 }

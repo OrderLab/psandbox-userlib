@@ -42,7 +42,7 @@ int main() {
     total_time -= time;
   }
 
-  printf("average time for release call is %lu ns\n", total_time/NUMBER);
+  printf("release, %lu\n", total_time/NUMBER);
   return 0;
 
 }

@@ -48,7 +48,7 @@ int main() {
 
   freeze_psandbox(id);
 
-  printf("average time for bind psandbox %lu ns\n", total_time/NUMBER);
+  printf("bind, %lu\n", total_time/NUMBER);
   release_psandbox(id);
   return 0;
 }

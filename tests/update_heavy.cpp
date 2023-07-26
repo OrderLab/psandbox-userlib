@@ -45,7 +45,7 @@ void* do_handle_one_connection(void* arg) {
 
   freeze_psandbox(id);
   if (j == THREAD - 1) {
-    printf("average time for heavy update psandbox %lu ns\n", total_time/(4*NUMBER));
+    printf("update2 (w/ interf.), %lu\n", total_time/(4*NUMBER));
   }
 
   release_psandbox(id);

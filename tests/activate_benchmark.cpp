@@ -45,7 +45,7 @@ int main() {
   }
 
 
-  printf("average time for activate psandbox %lu ns\n", total_time/NUMBER);
+  printf("activate, %lu\n", total_time/NUMBER);
   release_psandbox(id);
   return 0;
 }
