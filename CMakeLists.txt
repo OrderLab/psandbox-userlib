@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.10)
+cmake_minimum_required(VERSION 3.5)
 project(psandbox_userlib)
 
 set(CMAKE_MODULE_PATH ${CMAKE_SOURCE_DIR}/cmake/module ${CMAKE_MODULE_PATH})
