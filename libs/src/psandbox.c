@@ -35,7 +35,7 @@
 static __thread int psandbox_id;
 
 //#define DISABLE_PSANDBOX
-//#define IS_RETRO
+#define IS_RETRO
 //#define TRACE_NUMBER
 //#define NO_LIB
 struct hashmap_s  *psandbox_map = NULL;
@@ -172,6 +172,11 @@ int get_psandbox(size_t key) {
   #ifdef DISABLE_PSANDBOX
   return -1;
   #endif
+
+#ifdef IS_RETRO
+  return get_current_psandbox();
+#endif 
+
   int pid = (int) syscall(SYS_GET_PSANDBOX, key);
 #ifdef TRACE_NUMBER
   TRACK_SYSCALL();
@@ -187,6 +192,10 @@ int get_psandbox(size_t key) {
 int unbind_psandbox(size_t key, int pid, enum enum_unbind_flag flags) {
 #ifdef DISABLE_PSANDBOX
   return -1;
+#endif
+
+#ifdef IS_RETRO
+  return 1;
 #endif
   if (pid == -1) {
     printf("Error: Can't unbind sandbox for the thread %ld\n",syscall(SYS_gettid));
@@ -211,6 +220,10 @@ int bind_psandbox(size_t key) {
 #endif
 #ifdef TRACE_NUMBER
   TRACK_SYSCALL();
+#endif
+
+#ifdef IS_RETRO
+  return get_current_psandbox();
 #endif
   int bid = (int) syscall(SYS_BIND_PSANDBOX, key);
 
@@ -395,6 +408,7 @@ int get_psandbox_record() {
 #ifdef DISABLE_PSANDBOX
   return 1;
 #endif
+
   if (psandbox_id == 0)
     return -1;
   psandbox = (PSandbox *) hashmap_get(psandbox_map, psandbox_id, 0);
